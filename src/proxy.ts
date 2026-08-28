@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const protectedPrefixes = ["/dashboard", "/admin", "/acces-refuse"];
+const protectedPrefixes = ["/dashboard", "/admin", "/onboarding", "/acces-refuse"];
 const authPages = ["/login", "/register"];
 
 export async function proxy(request: NextRequest) {
@@ -17,9 +17,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  // Phase 6 (reportée) : quand *.watshop.africa sera actif, c'est ici qu'on
-  // détectera le sous-domaine et qu'on réécrira l'URL en interne vers
-  // /shop/[slug], sans toucher au reste de l'app — voir src/lib/tenant.ts.
+  // Pas de sous-domaine par boutique : une boutique est un segment de chemin
+  // (watshop.africa/maboutique), résolu par le routeur de fichiers. Rien à
+  // réécrire ici — voir src/lib/tenant.ts pour les slugs réservés.
 
   // Les hooks Supabase Auth sont appelés de serveur à serveur, sans cookie :
   // inutile d'y tenter un rafraîchissement de session (ils s'authentifient par
