@@ -23,6 +23,7 @@ create type payout_status as enum ('pending', 'paid');
 
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
+  email text unique, -- copie de auth.users.email, pratique côté admin/listes
   phone text unique,
   name text,
   avatar_url text,
@@ -266,20 +267,6 @@ create table public.push_tokens (
 create index push_tokens_user_id_idx on public.push_tokens (user_id);
 
 -- ============================================================
--- OTP WhatsApp (seul canal qui ne passe pas par Supabase Auth natif)
--- ============================================================
-
-create table public.whatsapp_otp_codes (
-  id uuid primary key default gen_random_uuid(),
-  phone text not null,
-  otp text not null,
-  expires_at timestamptz not null,
-  created_at timestamptz not null default now()
-);
-
-create index whatsapp_otp_codes_phone_idx on public.whatsapp_otp_codes (phone);
-
--- ============================================================
 -- Row Level Security
 -- ============================================================
 
@@ -298,7 +285,6 @@ alter table public.affiliate_referrals enable row level security;
 alter table public.affiliate_clicks enable row level security;
 alter table public.agent_commission_payouts enable row level security;
 alter table public.push_tokens enable row level security;
-alter table public.whatsapp_otp_codes enable row level security;
 
 -- Lecture publique du catalogue actif (boutique publique, marketplace)
 create policy "shops_public_read" on public.shops for select using (is_active = true);
@@ -311,7 +297,8 @@ create policy "reviews_public_read" on public.reviews for select using (true);
 
 -- Un vendeur gère sa propre boutique et ce qui en dépend
 create policy "profiles_self_read" on public.profiles for select using (auth.uid() = id);
-create policy "profiles_self_update" on public.profiles for update using (auth.uid() = id);
+create policy "profiles_self_update" on public.profiles for update
+  using (auth.uid() = id) with check (auth.uid() = id);
 
 create policy "shops_owner_all" on public.shops for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -362,12 +349,81 @@ create policy "affiliate_clicks_self_read" on public.affiliate_clicks for select
 create policy "agent_commission_payouts_self_read" on public.agent_commission_payouts for select
   using (auth.uid() = agent_id);
 
--- Aucune policy sur whatsapp_otp_codes : ce flux tourne exclusivement côté serveur
--- (route handler avec la clé service_role, avant même qu'une session existe).
+-- L'OTP WhatsApp ne passe plus par une table maison : Supabase Auth génère et
+-- vérifie le code (provider Phone), et le Send SMS Hook le fait livrer par Fonnte
+-- sur WhatsApp — voir src/app/api/auth/hooks/send-sms/route.ts.
 
--- Les tables ci-dessus n'ont pas de policy "admin" explicite : les routes /api/admin/*
--- utilisent la clé service_role (qui contourne RLS par nature) après vérification du
--- rôle 'admin' en base — voir Phase 1 pour le remplacement du secret admin en dur.
+-- Rôle admin : les écrans /admin lisent avec le client de l'utilisateur connecté
+-- (RLS appliquée) et non plus avec la clé service_role comme dans le legacy.
+-- security definer : la fonction lit public.profiles en contournant la RLS, ce qui
+-- évite la récursion infinie (une policy sur profiles qui interrogerait profiles).
+create function public.is_admin()
+returns boolean
+language sql
+stable
+security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+revoke execute on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'profiles', 'shops', 'categories', 'products', 'product_images',
+    'delivery_zones', 'delivery_partners', 'orders', 'order_items',
+    'reviews', 'subscriptions', 'affiliate_referrals', 'affiliate_clicks',
+    'agent_commission_payouts', 'push_tokens'
+  ]
+  loop
+    execute format(
+      'create policy %I on public.%I for all using (public.is_admin()) with check (public.is_admin())',
+      t || '_admin_all', t
+    );
+  end loop;
+end $$;
+
+-- ============================================================
+-- Anti-escalade de privilèges sur profiles
+-- ============================================================
+
+-- Un vendeur peut modifier son profil, mais pas se promouvoir admin ni changer
+-- ses paramètres de commission : la policy update seule ne suffit pas à
+-- l'empêcher (elle ne compare pas NEW et OLD), d'où ce trigger.
+create function public.guard_profile_privileged_columns()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  -- auth.uid() est null côté serveur (clé service_role) : ces appels-là sont
+  -- déjà passés par une vérification de rôle applicative, on les laisse faire.
+  if auth.uid() is null or public.is_admin() then
+    return new;
+  end if;
+
+  if new.role is distinct from old.role
+     or new.is_pro is distinct from old.is_pro
+     or new.agent_code is distinct from old.agent_code
+     or new.agent_commission is distinct from old.agent_commission
+     or new.agent_id is distinct from old.agent_id then
+    raise exception 'Champ réservé aux administrateurs';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger profiles_guard_privileged_columns
+  before update on public.profiles
+  for each row execute function public.guard_profile_privileged_columns();
 
 -- ============================================================
 -- Création automatique du profil à l'inscription (auth.users -> public.profiles)
@@ -379,13 +435,25 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, phone, name, avatar_url)
+  insert into public.profiles (id, email, phone, name, avatar_url)
   values (
     new.id,
+    new.email,
     new.phone,
-    new.raw_user_meta_data ->> 'name',
-    new.raw_user_meta_data ->> 'avatar_url'
-  );
+    coalesce(
+      new.raw_user_meta_data ->> 'name',
+      new.raw_user_meta_data ->> 'full_name'
+    ),
+    coalesce(
+      new.raw_user_meta_data ->> 'avatar_url',
+      new.raw_user_meta_data ->> 'picture'
+    )
+  )
+  on conflict (id) do nothing;
+
+  insert into public.subscriptions (user_id, plan, is_active)
+  values (new.id, 'free', true);
+
   return new;
 end;
 $$;

@@ -4,6 +4,11 @@
 // Remplacer ce fichier par la sortie de cette commande dès que possible : les
 // types ci-dessous sont fidèles au schéma mais maintenus manuellement.
 
+// Les tables sont décrites avec des alias de type (et non des interfaces) :
+// postgrest-js exige Row extends Record<string, unknown>, ce qu'une interface ne
+// satisfait pas (pas de signature d'index implicite) — l'inférence de
+// .select("a, b") retomberait alors sur never.
+
 export type UserRole = "user" | "agent" | "delivery" | "admin";
 export type VehicleType = "moto" | "velo" | "voiture" | "a_pied";
 export type SubscriptionPlan = "free" | "pro";
@@ -11,8 +16,9 @@ export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "c
 export type AffiliateStatus = "pending" | "confirmed" | "paid";
 export type PayoutStatus = "pending" | "paid";
 
-interface Profile {
+type Profile = {
   id: string;
+  email: string | null;
   phone: string | null;
   name: string | null;
   avatar_url: string | null;
@@ -26,7 +32,7 @@ interface Profile {
   created_at: string;
 }
 
-interface Shop {
+type Shop = {
   id: string;
   user_id: string;
   name: string;
@@ -44,13 +50,13 @@ interface Shop {
   created_at: string;
 }
 
-interface Category {
+type Category = {
   id: string;
   name_fr: string;
   icon: string | null;
 }
 
-interface Product {
+type Product = {
   id: string;
   shop_id: string;
   category_id: string | null;
@@ -67,7 +73,7 @@ interface Product {
   created_at: string;
 }
 
-interface ProductImage {
+type ProductImage = {
   id: string;
   product_id: string;
   url: string;
@@ -75,7 +81,7 @@ interface ProductImage {
   position: number;
 }
 
-interface DeliveryZone {
+type DeliveryZone = {
   id: string;
   shop_id: string;
   zone_name: string;
@@ -84,7 +90,7 @@ interface DeliveryZone {
   free_above: number | null;
 }
 
-interface DeliveryPartner {
+type DeliveryPartner = {
   id: string;
   user_id: string | null;
   shop_id: string;
@@ -96,7 +102,7 @@ interface DeliveryPartner {
   created_at: string;
 }
 
-interface Order {
+type Order = {
   id: string;
   shop_id: string;
   customer_name: string;
@@ -115,7 +121,7 @@ interface Order {
   created_at: string;
 }
 
-interface OrderItem {
+type OrderItem = {
   id: string;
   order_id: string;
   product_id: string | null;
@@ -125,7 +131,7 @@ interface OrderItem {
   size: string | null;
 }
 
-interface Review {
+type Review = {
   id: string;
   shop_id: string;
   product_id: string | null;
@@ -135,7 +141,7 @@ interface Review {
   created_at: string;
 }
 
-interface Subscription {
+type Subscription = {
   id: string;
   user_id: string;
   plan: SubscriptionPlan;
@@ -145,7 +151,7 @@ interface Subscription {
   created_at: string;
 }
 
-interface AffiliateReferral {
+type AffiliateReferral = {
   id: string;
   referrer_id: string;
   product_id: string | null;
@@ -157,7 +163,7 @@ interface AffiliateReferral {
   created_at: string;
 }
 
-interface AffiliateClick {
+type AffiliateClick = {
   id: string;
   referrer_id: string;
   product_id: string | null;
@@ -165,7 +171,7 @@ interface AffiliateClick {
   created_at: string;
 }
 
-interface AgentCommissionPayout {
+type AgentCommissionPayout = {
   id: string;
   agent_id: string;
   seller_id: string;
@@ -176,7 +182,7 @@ interface AgentCommissionPayout {
   created_at: string;
 }
 
-interface PushToken {
+type PushToken = {
   id: string;
   user_id: string;
   token: string;
@@ -185,21 +191,16 @@ interface PushToken {
   updated_at: string;
 }
 
-interface WhatsappOtpCode {
-  id: string;
-  phone: string;
-  otp: string;
-  expires_at: string;
-  created_at: string;
-}
-
+// Forme attendue par supabase-js : sans Relationships (et sans Views/Functions
+// plus bas), l'inférence des colonnes dans .select("a, b") retombe sur never.
 type TableDef<Row> = {
   Row: Row;
   Insert: Partial<Row>;
   Update: Partial<Row>;
+  Relationships: [];
 };
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       profiles: TableDef<Profile>;
@@ -217,7 +218,22 @@ export interface Database {
       affiliate_clicks: TableDef<AffiliateClick>;
       agent_commission_payouts: TableDef<AgentCommissionPayout>;
       push_tokens: TableDef<PushToken>;
-      whatsapp_otp_codes: TableDef<WhatsappOtpCode>;
     };
+    Views: Record<string, never>;
+    Functions: {
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+    };
+    Enums: {
+      user_role: UserRole;
+      vehicle_type: VehicleType;
+      subscription_plan: SubscriptionPlan;
+      order_status: OrderStatus;
+      affiliate_status: AffiliateStatus;
+      payout_status: PayoutStatus;
+    };
+    CompositeTypes: Record<string, never>;
   };
 }

@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const protectedPrefixes = ["/dashboard", "/admin"];
+const protectedPrefixes = ["/dashboard", "/admin", "/acces-refuse"];
 const authPages = ["/login", "/register"];
 
 export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") || "";
+  const path = request.nextUrl.pathname;
 
   // Porté depuis l'ancien src/middleware.ts (renommé proxy.ts en Next.js 16).
   if (host === "www.watshop.africa") {
@@ -19,6 +20,13 @@ export async function proxy(request: NextRequest) {
   // Phase 6 (reportée) : quand *.watshop.africa sera actif, c'est ici qu'on
   // détectera le sous-domaine et qu'on réécrira l'URL en interne vers
   // /shop/[slug], sans toucher au reste de l'app — voir src/lib/tenant.ts.
+
+  // Les hooks Supabase Auth sont appelés de serveur à serveur, sans cookie :
+  // inutile d'y tenter un rafraîchissement de session (ils s'authentifient par
+  // signature, voir api/auth/hooks/send-sms).
+  if (path.startsWith("/api/auth/hooks")) {
+    return NextResponse.next({ request });
+  }
 
   let response = NextResponse.next({ request });
 
@@ -45,17 +53,20 @@ export async function proxy(request: NextRequest) {
   // getSession()) — nécessaire ici pour rafraîchir le cookie de session à
   // chaque requête. Ce n'est qu'un contrôle optimiste : la vérification
   // sécurisée reste dans src/lib/dal.ts (verifySession), au plus près des
-  // données.
+  // données. Le rôle, lui, n'est jamais vérifié ici : il vit en base et
+  // pourrait avoir changé depuis l'émission du jeton.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
-  const isProtected = protectedPrefixes.some((p) => path.startsWith(p));
-  const isAuthPage = authPages.some((p) => path.startsWith(p));
+  const isProtected = protectedPrefixes.some((prefix) => path.startsWith(prefix));
+  const isAuthPage = authPages.some((prefix) => path.startsWith(prefix));
 
   if (isProtected && !user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const url = new URL("/login", request.url);
+    // Mémorise la destination pour y revenir après connexion.
+    url.searchParams.set("next", path);
+    return NextResponse.redirect(url);
   }
   if (isAuthPage && user) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
