@@ -89,6 +89,17 @@ export function slugify(input: string): string {
     .replace(/-+$/g, "");
 }
 
+/**
+ * Adresse publique d'un produit : le nom, plus un suffixe court tiré de son
+ * identifiant. Le suffixe garantit l'unicité sans logique de collision, et le
+ * slug est figé à la création — renommer un produit ne doit pas casser les
+ * liens déjà partagés sur WhatsApp.
+ */
+export function productSlug(name: string, id: string): string {
+  const base = slugify(name) || "produit";
+  return `${base}-${id.replace(/-/g, "").slice(0, 6)}`;
+}
+
 /** Le tenant courant, tel que le routeur de fichiers l'a extrait de l'URL. */
 export function getTenantSlugFromParams(params: { slug?: string }): string | null {
   return params.slug ?? null;

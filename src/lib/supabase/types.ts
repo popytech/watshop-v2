@@ -66,6 +66,7 @@ type Product = {
   shop_id: string;
   category_id: string | null;
   name: string;
+  slug: string;
   description: string | null;
   price: number;
   promo_price: number | null;

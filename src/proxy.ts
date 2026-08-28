@@ -28,6 +28,25 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
+  const isProtected = protectedPrefixes.some((prefix) => path.startsWith(prefix));
+  const isAuthPage = authPages.some((prefix) => path.startsWith(prefix));
+
+  // La boutique publique est la page la plus vue du produit, et ses visiteurs
+  // n'ont pas de compte. Sans cookie de session, il n'y a rien à rafraîchir ni
+  // à protéger : on évite un aller-retour vers Supabase Auth à chaque affichage.
+  const hasSessionCookie = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith("sb-"));
+
+  if (!hasSessionCookie) {
+    if (isProtected) {
+      const url = new URL("/login", request.url);
+      url.searchParams.set("next", path);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -58,9 +77,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const isProtected = protectedPrefixes.some((prefix) => path.startsWith(prefix));
-  const isAuthPage = authPages.some((prefix) => path.startsWith(prefix));
 
   if (isProtected && !user) {
     const url = new URL("/login", request.url);

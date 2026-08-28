@@ -7,6 +7,7 @@ import { verifySession } from "@/lib/dal";
 import { uploadImage } from "@/lib/storage";
 import { toE164 } from "@/lib/phone";
 import { getMyShop, getProduct, requireShop } from "@/lib/shop/queries";
+import { productSlug } from "@/lib/tenant";
 import {
   appearanceSchema,
   fieldErrors,
@@ -181,11 +182,17 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
   const shop = await requireShop();
   const supabase = await createClient();
 
+  // L'identifiant est tiré ici plutôt que par la base : il entre dans le slug,
+  // qu'on veut poser dès l'insertion.
+  const productId = crypto.randomUUID();
+
   const { data: product, error } = await supabase
     .from("products")
     .insert({
+      id: productId,
       shop_id: shop.id,
       name: parsed.data.name,
+      slug: productSlug(parsed.data.name, productId),
       description: parsed.data.description ?? null,
       price: parsed.data.price,
       promo_price: parsed.data.promoPrice,
@@ -237,6 +244,8 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
   if (!existing) return { message: "Produit introuvable." };
 
   const supabase = await createClient();
+  // Le slug n'est volontairement pas recalculé : renommer un produit ne doit
+  // pas invalider les liens déjà partagés.
   const { error } = await supabase
     .from("products")
     .update({

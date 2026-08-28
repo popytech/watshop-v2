@@ -101,6 +101,10 @@ create table public.products (
   shop_id uuid not null references public.shops (id) on delete cascade,
   category_id uuid references public.categories (id) on delete set null,
   name text not null,
+  -- Adresse publique du produit, partagée sur WhatsApp : elle doit être
+  -- lisible. Suffixe court tiré de l'identifiant pour garantir l'unicité sans
+  -- logique de collision (robe-africaine-a3f9c1).
+  slug text not null,
   description text,
   price integer not null,
   promo_price integer,
@@ -114,6 +118,7 @@ create table public.products (
 );
 
 create index products_shop_id_idx on public.products (shop_id);
+create unique index products_shop_slug_idx on public.products (shop_id, slug);
 create index products_category_id_idx on public.products (category_id);
 
 create table public.product_images (
