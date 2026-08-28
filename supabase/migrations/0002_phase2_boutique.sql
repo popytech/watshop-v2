@@ -113,33 +113,55 @@ create policy "shop_visits_admin_all" on public.shop_visits for all
 -- Cloudflare R2 reste la cible (ROADMAP, section 3). En attendant ses accès, le
 -- stockage passe par Supabase Storage : même projet, aucune clé supplémentaire.
 -- Côté code, un seul fichier à changer le jour du basculement (src/lib/storage.ts).
-insert into storage.buckets (id, name, public)
-values ('shop-media', 'shop-media', true)
-on conflict (id) do nothing;
+--
+-- Tout ce bloc est encadré : storage.objects appartient à supabase_storage_admin,
+-- et selon le projet le rôle qui exécute ce script n'a pas le droit d'y créer
+-- des policies. Sans ce garde-fou, l'erreur ferait échouer — et annuler — tout
+-- le script, l'éditeur SQL de Supabase l'exécutant dans une seule transaction.
+-- En cas de refus, le message dit quoi faire à la main.
+do $$
+begin
+  insert into storage.buckets (id, name, public)
+  values ('shop-media', 'shop-media', true)
+  on conflict (id) do nothing;
 
--- Convention de chemin : <user_id>/<shop_id>/<fichier>. La policy s'appuie
--- dessus pour qu'un vendeur ne puisse écrire que dans son propre dossier.
-drop policy if exists "shop_media_public_read" on storage.objects;
-create policy "shop_media_public_read" on storage.objects for select
-  using (bucket_id = 'shop-media');
+  -- Convention de chemin : <user_id>/<shop_id>/<fichier>. La policy s'appuie
+  -- dessus pour qu'un vendeur ne puisse écrire que dans son propre dossier.
+  execute $p$
+    drop policy if exists "shop_media_public_read" on storage.objects
+  $p$;
+  execute $p$
+    create policy "shop_media_public_read" on storage.objects for select
+      using (bucket_id = 'shop-media')
+  $p$;
 
-drop policy if exists "shop_media_owner_insert" on storage.objects;
-create policy "shop_media_owner_insert" on storage.objects for insert to authenticated
-  with check (
-    bucket_id = 'shop-media'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
+  execute $p$
+    drop policy if exists "shop_media_owner_insert" on storage.objects
+  $p$;
+  execute $p$
+    create policy "shop_media_owner_insert" on storage.objects for insert to authenticated
+      with check (bucket_id = 'shop-media' and (storage.foldername(name))[1] = auth.uid()::text)
+  $p$;
 
-drop policy if exists "shop_media_owner_update" on storage.objects;
-create policy "shop_media_owner_update" on storage.objects for update to authenticated
-  using (
-    bucket_id = 'shop-media'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
+  execute $p$
+    drop policy if exists "shop_media_owner_update" on storage.objects
+  $p$;
+  execute $p$
+    create policy "shop_media_owner_update" on storage.objects for update to authenticated
+      using (bucket_id = 'shop-media' and (storage.foldername(name))[1] = auth.uid()::text)
+  $p$;
 
-drop policy if exists "shop_media_owner_delete" on storage.objects;
-create policy "shop_media_owner_delete" on storage.objects for delete to authenticated
-  using (
-    bucket_id = 'shop-media'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
+  execute $p$
+    drop policy if exists "shop_media_owner_delete" on storage.objects
+  $p$;
+  execute $p$
+    create policy "shop_media_owner_delete" on storage.objects for delete to authenticated
+      using (bucket_id = 'shop-media' and (storage.foldername(name))[1] = auth.uid()::text)
+  $p$;
+
+exception
+  when duplicate_object then
+    raise notice 'Policies du bucket shop-media déjà en place, rien à faire.';
+  when insufficient_privilege then
+    raise notice 'Droits insuffisants sur storage.objects : créer le bucket public « shop-media » dans Storage, puis ses policies depuis l''interface (voir docs/PHASE-2-DASHBOARD.md). Le reste du schéma est appliqué.';
+end $$;
