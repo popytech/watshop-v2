@@ -12,6 +12,7 @@
 export type UserRole = "user" | "agent" | "delivery" | "admin";
 export type VehicleType = "moto" | "velo" | "voiture" | "a_pied";
 export type SubscriptionPlan = "free" | "pro";
+export type OrderSource = "storefront" | "whatsapp" | "manual";
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
 export type AffiliateStatus = "pending" | "confirmed" | "paid";
 export type PayoutStatus = "pending" | "paid";
@@ -38,11 +39,15 @@ type Shop = {
   name: string;
   slug: string;
   description: string | null;
-  whatsapp_number: string;
+  whatsapp_number: string | null;
+  mobile_money_number: string | null;
   country_code: string;
   currency_symbol: string;
   logo_url: string | null;
+  primary_color: string;
   category: string | null;
+  onboarding_step: number;
+  published_at: string | null;
   is_active: boolean;
   is_verified: boolean;
   is_sponsored: boolean;
@@ -115,6 +120,7 @@ type Order = {
   delivery_fee: number;
   total_amount: number;
   status: OrderStatus;
+  source: OrderSource;
   seller_notification_status: string | null;
   seller_notification_phone: string | null;
   seller_notified_at: string | null;
@@ -182,6 +188,14 @@ type AgentCommissionPayout = {
   created_at: string;
 }
 
+type ShopVisit = {
+  id: string;
+  shop_id: string;
+  product_id: string | null;
+  visitor_hash: string | null;
+  created_at: string;
+};
+
 type PushToken = {
   id: string;
   user_id: string;
@@ -218,6 +232,7 @@ export type Database = {
       affiliate_clicks: TableDef<AffiliateClick>;
       agent_commission_payouts: TableDef<AgentCommissionPayout>;
       push_tokens: TableDef<PushToken>;
+      shop_visits: TableDef<ShopVisit>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -231,6 +246,7 @@ export type Database = {
       vehicle_type: VehicleType;
       subscription_plan: SubscriptionPlan;
       order_status: OrderStatus;
+      order_source: OrderSource;
       affiliate_status: AffiliateStatus;
       payout_status: PayoutStatus;
     };

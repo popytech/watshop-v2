@@ -13,6 +13,21 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Certaines signatures sont imposées de l'extérieur : une action passée à
+      // useActionState reçoit toujours (état, formData), même quand elle n'a
+      // besoin ni de l'un ni de l'autre. Le préfixe _ dit que c'est voulu.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
