@@ -1,8 +1,15 @@
 import Link from "next/link";
-import { Store, Package, ShoppingCart, Users, Wallet, BadgeCheck, Megaphone } from "lucide-react";
+import {
+  BadgeCheck,
+  Megaphone,
+  Package,
+  ShoppingCart,
+  Store,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
 import {
   Card,
   CardContent,
@@ -10,11 +17,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatNumber } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Administration — Watshop" };
 
-const TILES = [
+const TUILES = [
   { table: "profiles" as const, label: "Comptes", icon: Users },
   { table: "shops" as const, label: "Boutiques", icon: Store },
   { table: "products" as const, label: "Produits", icon: Package },
@@ -27,79 +35,115 @@ export default async function AdminPage() {
   // service_role. Si le rôle change en base, l'accès change immédiatement.
   const supabase = await createClient();
 
-  const counts = await Promise.all(
-    TILES.map(async (tile) => {
-      const { count } = await supabase
-        .from(tile.table)
-        .select("*", { count: "exact", head: true });
-      return count ?? 0;
-    }),
-  );
+  const [comptes, paiements, agents] = await Promise.all([
+    Promise.all(
+      TUILES.map(async (tuile) => {
+        const { count } = await supabase
+          .from(tuile.table)
+          .select("*", { count: "exact", head: true });
+        return count ?? 0;
+      }),
+    ),
+    supabase.from("payments").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase
+      .from("agent_applications")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+  ]);
+
+  const enAttente = [
+    {
+      compte: paiements.count ?? 0,
+      href: "/admin/paiements",
+      icon: Wallet,
+      singulier: "virement Mobile Money déclaré, à confirmer",
+      pluriel: "virements Mobile Money déclarés, à confirmer",
+      action: "Ouvrir les paiements",
+    },
+    {
+      compte: agents.count ?? 0,
+      href: "/admin/agents",
+      icon: BadgeCheck,
+      singulier: "candidature d'agent commercial à examiner",
+      pluriel: "candidatures d'agent commercial à examiner",
+      action: "Valider les agents",
+    },
+  ].filter((item) => item.compte > 0);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Administration</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Tableau de bord</h1>
         <p className="text-sm text-muted-foreground">
           Accès réservé au rôle administrateur, vérifié à chaque requête.
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {TILES.map((tile, index) => (
-          <Card key={tile.table} size="sm">
+        {TUILES.map((tuile, index) => (
+          <Card key={tuile.table} size="sm">
             <CardHeader>
               <CardDescription className="flex items-center gap-2">
-                <tile.icon className="size-4" />
-                {tile.label}
+                <tuile.icon className="size-4" />
+                {tuile.label}
               </CardDescription>
-              <CardTitle className="text-2xl tabular-nums">{counts[index]}</CardTitle>
+              <CardTitle className="text-2xl tabular-nums">
+                {formatNumber(comptes[index])}
+              </CardTitle>
             </CardHeader>
           </Card>
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">À vérifier</CardTitle>
-          <CardDescription>
-            Les déclarations de virement Mobile Money des vendeurs qui passent en Pro, et les
-            comptes qui demandent le rôle d&apos;agent commercial.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="lg" className="h-11">
-            <Link href="/admin/paiements">
-              <Wallet />
-              Ouvrir les paiements
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-11">
-            <Link href="/admin/agents">
-              <BadgeCheck />
-              Valider les agents
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-11">
-            <Link href="/admin/diffusion">
-              <Megaphone />
-              Diffuser un message
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">À venir</CardTitle>
-          <CardDescription>
-            Gestion des comptes et des rôles, vérification des boutiques, diffusion WhatsApp
-            (Phase 5). Les écrans se brancheront sur ces mêmes policies : aucune route
-            d&apos;administration n&apos;utilise de secret partagé.
-          </CardDescription>
-        </CardHeader>
-        <CardContent />
-      </Card>
+      {/* Les raccourcis de navigation qui étaient ici ont disparu : la barre de
+          gauche les porte désormais, avec le compte en attente sur chacun. Ne
+          reste donc que ce qui demande vraiment une décision — et rien quand il
+          n'y a rien, une carte « À vérifier » toujours vide apprenant surtout à
+          ne plus la regarder. */}
+      {enAttente.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">À vérifier</CardTitle>
+            <CardDescription>Ce qui attend une décision de votre part.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {enAttente.map((item) => (
+              <div
+                key={item.href}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+              >
+                <p className="flex items-center gap-2 text-sm">
+                  <item.icon className="size-4 shrink-0 text-muted-foreground" />
+                  <span>
+                    <span className="font-semibold tabular-nums">{formatNumber(item.compte)}</span>{" "}
+                    {item.compte > 1 ? item.pluriel : item.singulier}
+                  </span>
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={item.href}>{item.action}</Link>
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Rien en attente</CardTitle>
+            <CardDescription>
+              Aucun virement à confirmer, aucune candidature d&apos;agent à examiner.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/diffusion">
+                <Megaphone />
+                Diffuser un message
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
