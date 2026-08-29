@@ -28,9 +28,13 @@ fiche produit dans la boutique du vendeur, là où sont le panier, ses zones de
 livraison et son WhatsApp. Le marketplace fait entrer l'acheteur ; il ne
 s'interpose pas dans la vente.
 
-## Migration à exécuter
+## Migration — appliquée
 
-`supabase/migrations/0010_marketplace.sql`, après `0009`.
+`supabase/migrations/0010_marketplace.sql`, après `0009`. **Exécutée et
+vérifiée** : `effective_price` calcule juste (un produit à 350 000 avec une
+promo à 150 000 vaut 150 000), les deux tris par prix répondent, et Postgres
+refuse d'écrire la colonne générée (`428C9 column "effective_price" can only be
+updated to DEFAULT`).
 
 Elle ne touche pas aux droits. Elle ajoute :
 
@@ -43,10 +47,11 @@ Elle ne touche pas aux droits. Elle ajoute :
 - **`pg_trgm`** et deux index GIN, parce que la recherche est un
   `ilike '%terme%'` qu'aucun index B-tree ne peut servir.
 
-> **Tant qu'elle n'est pas passée**, `/boutiques` et `/produits` fonctionnent,
-> mais les deux tris par prix de `/produits` renvoient une erreur 500
+> Sur une base où elle n'aurait pas été passée, `/boutiques` et `/produits`
+> fonctionnent quand même : seuls les deux tris par prix renvoient une erreur 500
 > (`42703 column products.effective_price does not exist`). L'affichage des prix,
-> lui, ne dépend pas de la colonne : les cartes restent justes.
+> lui, ne dépend pas de la colonne — les cartes le recalculent avec le même
+> helper que la boutique.
 
 ## Recette
 
