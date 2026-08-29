@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "../styles/utils.css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -112,6 +113,7 @@
   --chart-4: #34b7f1;
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
+  --line-width: 1px;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: #128c4a;

@@ -7,7 +7,7 @@ import { Section } from "@/components/landing/section";
 
 export function Cta({ connecte }: { connecte: boolean }) {
   return (
-    <Section className="relative overflow-hidden border-t">
+    <Section className="line-b relative overflow-hidden">
       <Glow variant="center" className="opacity-60" />
 
       <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">

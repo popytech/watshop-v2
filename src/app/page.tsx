@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { LandingNav } from "@/components/landing/landing-nav";
+import { LayoutLines } from "@/components/landing/layout-lines";
 import { Hero } from "@/components/landing/hero";
 import { Steps } from "@/components/landing/steps";
 import { Shops } from "@/components/landing/shops";
@@ -38,10 +39,11 @@ export default async function Home() {
   const connecte = Boolean(user);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="relative flex flex-1 flex-col">
+      <LayoutLines />
       <LandingNav connecte={connecte} />
 
-      <main className="flex-1">
+      <main className="relative flex-1">
         <Hero connecte={connecte} />
 
         <div id="fonctionnement">

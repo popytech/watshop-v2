@@ -9,7 +9,7 @@ import { formatMoney } from "@/lib/format";
 
 export function Pricing() {
   return (
-    <Section className="border-t">
+    <Section className="line-b">
       <SectionHeader
         eyebrow="Tarifs"
         title="Commencez gratuitement"
@@ -25,8 +25,8 @@ export function Pricing() {
               key={plan.id}
               className={
                 recommande
-                  ? "flex flex-col gap-5 rounded-xl border-2 border-brand bg-card p-6"
-                  : "flex flex-col gap-5 rounded-xl border bg-card p-6"
+                  ? "glass-4 relative flex flex-col gap-6 rounded-2xl p-8 shadow-xl ring-2 ring-brand"
+                  : "glass-2 relative flex flex-col gap-6 rounded-2xl p-8 shadow-xl"
               }
             >
               <div className="flex flex-col gap-1">

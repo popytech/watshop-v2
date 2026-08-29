@@ -35,7 +35,7 @@ const QUESTIONS = [
 
 export function Faq() {
   return (
-    <Section className="border-t bg-muted/30">
+    <Section className="line-b">
       <SectionHeader eyebrow="Questions" title="Ce qu'on nous demande le plus" />
 
       <Accordion type="single" collapsible className="mx-auto mt-10 w-full max-w-2xl">
