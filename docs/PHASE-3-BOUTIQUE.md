@@ -83,6 +83,23 @@ son navigateur.
 
 ---
 
+## 4 bis. Quand la notification WhatsApp n'arrive pas
+
+`orders.seller_notification_status` passe à `failed` et la raison exacte est
+journalisée côté serveur. Le premier réflexe est de vérifier l'état de
+l'appareil Fonnte, qui se déconnecte dès que la session WhatsApp du téléphone
+lié expire :
+
+```bash
+curl -X POST https://api.fonnte.com/device -H "Authorization: $FONNTE_TOKEN"
+```
+
+`device_status: "disconnect"` signifie que le token est valide mais qu'aucun
+téléphone n'est relié : reconnecter l'appareil dans le tableau de bord Fonnte
+(scan du QR code). La réponse donne aussi le quota restant du forfait.
+
+---
+
 ## 5. Visiteurs et vie privée
 
 Le compteur de visiteurs est alimenté par `POST /api/visites`, appelé depuis le

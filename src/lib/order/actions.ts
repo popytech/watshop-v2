@@ -214,6 +214,14 @@ async function notifySeller(params: {
 
   const result = await sendWhatsAppMessage(toFonnteTarget(params.sellerPhone), message);
 
+  if (!result.ok) {
+    // La raison exacte n'est pas stockée en base (la colonne sert d'indicateur
+    // au vendeur, pas de journal), mais sans elle un échec d'envoi est
+    // indébogable : "failed" ne dit pas si c'est le token, le quota ou
+    // l'appareil WhatsApp déconnecté côté Fonnte.
+    console.error(`[commande ${params.orderId.slice(0, 8)}] notification WhatsApp échouée : ${result.reason}`);
+  }
+
   await admin
     .from("orders")
     .update({
