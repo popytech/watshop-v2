@@ -84,7 +84,10 @@ create table public.shops (
 -- contenir une adresse injoignable.
 alter table public.shops
   add constraint shops_slug_format
-  check (slug ~ '^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]
+  check (slug ~ '^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$');
+
+create index shops_user_id_idx on public.shops (user_id);
+create index shops_slug_idx on public.shops (slug);
 
 -- ============================================================
 -- Catalogue
