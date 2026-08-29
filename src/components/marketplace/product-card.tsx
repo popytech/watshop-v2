@@ -8,19 +8,33 @@ import { effectivePrice } from "@/lib/shop/public";
 import type { MarketplaceProduct } from "@/lib/marketplace/queries";
 
 /**
- * Carte produit du marketplace.
+ * Carte produit du marketplace, dans la composition de Your Next Store (MIT) :
+ * visuel carré aux coins arrondis, texte posé dessous sans encadrement. Une
+ * grille de vitrine, pas une grille de tableau de bord.
  *
- * Proche de celle de la boutique, avec une différence qui justifie un composant
- * séparé : ici l'acheteur navigue entre des vendeurs, il doit voir chez qui il
- * achète avant de cliquer. Le lien mène à la fiche produit dans la boutique du
- * vendeur, pas à une fiche du marketplace : c'est là qu'est le panier.
+ * Deux ajouts propres à Watshop :
+ *   - la deuxième photo apparaît au survol, quand le vendeur en a mis une ;
+ *   - le nom de la boutique, parce qu'ici l'acheteur navigue entre des vendeurs
+ *     et doit savoir chez qui il achète avant de cliquer.
+ *
+ * Le lien mène à la fiche produit dans la boutique du vendeur, pas à une fiche
+ * du marketplace : c'est là qu'est le panier.
  */
-export function MarketplaceProductCard({ product }: { product: MarketplaceProduct }) {
-  const cover = [...(product.product_images ?? [])].sort((a, b) => a.position - b.position)[0];
+export function MarketplaceProductCard({
+  product,
+  priority = false,
+}: {
+  product: MarketplaceProduct;
+  /** Vrai pour la première carte : son image est le plus grand élément visible. */
+  priority?: boolean;
+}) {
+  const images = [...(product.product_images ?? [])].sort((a, b) => a.position - b.position);
+  const principale = images[0];
+  const secondaire = images[1];
+
   // Recalculé plutôt que lu dans `effective_price` : la colonne générée sert au
   // tri, qui se fait en SQL ; l'affichage passe par le même helper que la
-  // boutique, donc une carte reste juste même sur une base où la migration 0010
-  // n'est pas encore passée.
+  // boutique, donc la carte reste juste même si la migration n'est pas passée.
   const prix = effectivePrice(product);
   const enPromo = prix < product.price;
   const rupture = product.quantity <= 0;
@@ -28,21 +42,34 @@ export function MarketplaceProductCard({ product }: { product: MarketplaceProduc
 
   return (
     <li>
-      <Link
-        href={`/${product.shops.slug}/produit/${product.slug}`}
-        className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary/40"
-      >
-        <span className="relative flex aspect-square items-center justify-center bg-muted">
-          {cover ? (
-            <Image
-              src={cover.url}
-              alt={cover.alt_text || product.name}
-              fill
-              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-              className="object-cover transition-transform group-hover:scale-[1.02]"
-            />
+      <Link href={`/${product.shops.slug}/produit/${product.slug}`} className="group block">
+        <div className="relative mb-3 aspect-square overflow-hidden rounded-2xl bg-secondary">
+          {principale ? (
+            <>
+              <Image
+                src={principale.url}
+                alt={principale.alt_text || product.name}
+                fill
+                sizes="(min-width: 1280px) 25vw, (min-width: 640px) 33vw, 50vw"
+                priority={priority}
+                className={`object-cover transition-opacity duration-500 ${
+                  secondaire ? "group-hover:opacity-0" : ""
+                }`}
+              />
+              {secondaire ? (
+                <Image
+                  src={secondaire.url}
+                  alt=""
+                  fill
+                  sizes="(min-width: 1280px) 25vw, (min-width: 640px) 33vw, 50vw"
+                  className="object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                />
+              ) : null}
+            </>
           ) : (
-            <ImageOff className="size-5 text-muted-foreground" />
+            <span className="flex size-full items-center justify-center">
+              <ImageOff className="size-5 text-muted-foreground" />
+            </span>
           )}
 
           {enPromo ? <Badge className="absolute top-2 left-2">Promo</Badge> : null}
@@ -51,25 +78,25 @@ export function MarketplaceProductCard({ product }: { product: MarketplaceProduc
               Rupture
             </Badge>
           ) : null}
-        </span>
+        </div>
 
-        <span className="flex flex-1 flex-col gap-1 p-3">
-          <span className="line-clamp-2 text-sm font-medium">{product.name}</span>
+        <div className="space-y-0.5">
+          <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
 
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <Store className="size-3 shrink-0" />
             <span className="truncate">{product.shops.name}</span>
-          </span>
+          </p>
 
-          <span className="mt-auto pt-1 text-sm">
+          <p className="pt-0.5 text-sm">
             <span className="font-semibold">{formatMoney(prix, devise)}</span>
             {enPromo ? (
               <span className="ml-1.5 text-muted-foreground line-through">
                 {formatMoney(product.price, devise)}
               </span>
             ) : null}
-          </span>
-        </span>
+          </p>
+        </div>
       </Link>
     </li>
   );

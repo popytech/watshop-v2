@@ -15,6 +15,35 @@ Le marketplace ajoute les deux pages qui manquaient.
 Les deux segments étaient réservés depuis la Phase 0 dans `RESERVED_SLUGS` :
 aucune boutique existante ne peut les avoir pris.
 
+## D'où vient la mise en page
+
+De [Your Next Store](https://github.com/yournextstore/yournextstore) (MIT), qui
+tourne sur exactement notre pile — Next 16.3.2, React 19.2.8. Repris de leur
+page `/products` :
+
+| Élément | Fichier chez eux | Chez nous |
+|---|---|---|
+| Filtres en colonne à gauche, panneau coulissant sur téléphone | `components/sections/product-filters.tsx` | `marketplace/filters.tsx` + `filters-mobile.tsx` |
+| Pagination numérotée avec ellipse | `components/listing-pagination.tsx` | `marketplace/listing-pagination.tsx` |
+| Carte sans bordure, visuel carré arrondi, texte dessous | `components/product-card.tsx` | `marketplace/product-card.tsx` |
+| Squelette aux proportions de la carte | `components/product-grid-skeleton.tsx` | `marketplace/product-grid-skeleton.tsx` |
+| Tri en liens qui remettent à la page 1 | `app/products/products-sort-select.tsx` | `marketplace/sort.tsx` |
+
+Trois écarts assumés :
+
+- **Leurs filtres poussent par le routeur côté client ; les nôtres sont de vrais
+  liens et un vrai formulaire GET.** Même résultat visible, mais il marche avant
+  que le JavaScript ait fini de charger. Sur un Android d'entrée de gamme en 3G,
+  ce n'est pas un détail. Seul le panneau coulissant est un composant client —
+  les filtres qu'il contient sont rendus côté serveur et passés en `children`.
+- **Deux filtres au lieu de six.** Leurs facettes (marques, collections,
+  fourchette de prix, déclinaisons) n'ont pas d'équivalent en base. En afficher
+  qui ne filtreraient rien serait pire que de ne pas les afficher.
+- **Leur carte est couplée à `commerce-kit`** (variantes, prix mini/maxi,
+  `QuickAddButton`). Watshop n'a pas de variantes. Ce qui a été repris est la
+  composition, plus la bascule d'image au survol — que nos `product_images`
+  permettent quand le vendeur a mis une deuxième photo.
+
 ## Ce qui n'a pas changé
 
 **Aucune policy n'a été ouverte.** Les policies publiques posées en Phase 3
@@ -76,10 +105,23 @@ Vérifications déjà faites en local, sur la base de production :
 | Cas | Résultat |
 |---|---|
 | `/boutiques`, `/produits` | 200 |
-| `?page=2` au-delà des résultats | 404 (et non 500 : PostgREST refuse la plage, c'est rattrapé) |
+| `?page=2` et `?page=999` au-delà des résultats | 404 |
 | `?categorie=nimportequoi` | 200, filtre inconnu ignoré |
 | `?q=%,)` — caractères qui cassent la syntaxe PostgREST | 200, terme nettoyé |
 | `/gnakryshop` | 200 — le groupe de routes n'a pas cassé le segment boutique |
+
+### Deux pièges de pagination, tous deux rencontrés
+
+**PostgREST refuse une plage qui commence après la dernière ligne** — il répond
+`PGRST103`, pas une liste vide. `?page=2` rendait donc un 500. C'est rattrapé
+dans `queries.ts`, qui recompte et renvoie une page vide.
+
+**Avec `Suspense`, le code HTTP part avant le contenu.** Le `notFound()` était
+d'abord appelé dans la liste suspendue : la page 404 s'affichait, mais sous un
+statut **200**, qu'un moteur de recherche aurait indexé. Le numéro de page est
+maintenant validé dans le corps de la page, avant tout rendu, par un compte seul
+(`countShops` / `countProducts`) — et seulement au-delà de la première page,
+donc sans requête supplémentaire sur le chemin courant.
 
 ## Ce qui reste à faire
 

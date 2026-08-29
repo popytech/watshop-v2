@@ -169,3 +169,33 @@ export async function listProducts(params: MarketplaceParams): Promise<Page<Mark
 export function productCount(shop: MarketplaceShop): number {
   return shop.products?.[0]?.count ?? 0;
 }
+
+/*
+ * Comptes seuls, sans ramener une ligne.
+ *
+ * Ils servent à valider le numéro de page avant que le rendu ne commence. La
+ * liste, elle, est suspendue : une fois le flux ouvert, le code HTTP est déjà
+ * parti, et un notFound() déclenché plus tard afficherait la page 404 sous un
+ * statut 200. Or `?page=999` doit répondre 404, sans quoi un moteur de
+ * recherche indexe une page qui n'existe pas.
+ *
+ * Le coût est nul sur le chemin courant : les pages n'appellent ces fonctions
+ * que lorsque `page > 1`.
+ */
+export async function countShops(params: MarketplaceParams): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await filtrerBoutiques(
+    supabase.from("shops").select("id", { count: "exact", head: true }),
+    params,
+  );
+  return count ?? 0;
+}
+
+export async function countProducts(params: MarketplaceParams): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await filtrerProduits(
+    supabase.from("products").select("id, shops!inner(category)", { count: "exact", head: true }),
+    params,
+  );
+  return count ?? 0;
+}

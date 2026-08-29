@@ -1,64 +1,125 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
-import { Filters } from "@/components/marketplace/filters";
-import { Pagination } from "@/components/marketplace/pagination";
+import { FilterControls } from "@/components/marketplace/filters";
+import { FiltersMobile } from "@/components/marketplace/filters-mobile";
+import { ListingPagination } from "@/components/marketplace/listing-pagination";
 import { ShopCard } from "@/components/marketplace/shop-card";
-import { AucunResultat, MarketplacePageHeader } from "@/components/marketplace/page-header";
+import { ShopGridSkeleton } from "@/components/marketplace/shop-grid-skeleton";
 import { formatNumber } from "@/lib/format";
-import { listShops } from "@/lib/marketplace/queries";
-import { parseParams } from "@/lib/marketplace/params";
+import { countShops, listShops } from "@/lib/marketplace/queries";
+import { nombreDePages, parseParams, type MarketplaceParams } from "@/lib/marketplace/params";
 
-export const metadata: Metadata = {
-  title: "Toutes les boutiques — Watshop",
-  description:
-    "Découvrez les boutiques des commerçants de Guinée et d'Afrique de l'Ouest : mode, beauté, alimentation, électronique. Commandez directement sur WhatsApp.",
-  openGraph: {
-    title: "Toutes les boutiques — Watshop",
-    description: "Les commerçants qui vendent sur Watshop, par catégorie et par pays.",
-    type: "website",
-  },
-};
+const CHEMIN = "/boutiques";
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}): Promise<Metadata> {
+  const { page } = parseParams(await searchParams);
+
+  // Canonique sans les filtres : leurs combinaisons donnent des dizaines
+  // d'adresses pour le même annuaire. La pagination reste, ses pages ayant bien
+  // un contenu différent.
+  const canonical = page > 1 ? `${CHEMIN}?page=${page}` : CHEMIN;
+  const title = page > 1 ? `Toutes les boutiques — page ${page}` : "Toutes les boutiques — Watshop";
+
+  return {
+    title,
+    description:
+      "Découvrez les boutiques des commerçants de Guinée et d'Afrique de l'Ouest : mode, beauté, alimentation, électronique. Commandez directement sur WhatsApp.",
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title,
+      description: "Les commerçants qui vendent sur Watshop, par catégorie et par pays.",
+      url: canonical,
+    },
+  };
+}
+
+async function ListeBoutiques({ params }: { params: MarketplaceParams }) {
+  const { items, total } = await listShops(params);
+  const filtre = Boolean(params.q || params.categorie || params.pays);
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed px-6 py-24 text-center">
+        <p className="font-medium">Aucune boutique trouvée</p>
+        <p className="pt-1 text-sm text-muted-foreground">
+          {filtre
+            ? "Essayez avec moins de filtres, ou un autre mot-clé."
+            : "Les premières boutiques arrivent. Revenez bientôt."}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-8">
+      <p className="text-sm text-muted-foreground tabular-nums">
+        {formatNumber(total)} boutique{total > 1 ? "s" : ""}
+        {filtre ? " correspondent à votre recherche" : " en ligne"}
+      </p>
+
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+        {items.map((shop) => (
+          <ShopCard key={shop.id} shop={shop} />
+        ))}
+      </ul>
+
+      <ListingPagination params={params} total={total} chemin={CHEMIN} />
+    </div>
+  );
+}
 
 export default async function BoutiquesPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<SearchParams>;
 }) {
   const params = parseParams(await searchParams);
-  const { items, total } = await listShops(params);
+  const actifs = [params.q, params.categorie, params.pays].filter(Boolean).length;
 
-  // Une page au-delà des résultats n'existe pas : mieux vaut un 404 franc
-  // qu'une liste vide qui laisserait croire que le filtre ne donne rien.
-  if (items.length === 0 && params.page > 1) notFound();
-
-  const filtre = Boolean(params.q || params.categorie || params.pays);
+  // Validé avant le rendu, pas dans la liste suspendue : une fois le flux
+  // ouvert, le code HTTP est parti, et un notFound() plus tard afficherait la
+  // page 404 sous un statut 200. Un compte seul, et seulement au-delà de la
+  // première page — donc rien de plus sur le chemin courant.
+  if (params.page > 1 && params.page > nombreDePages(await countShops(params))) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:py-12">
-      <MarketplacePageHeader
-        title="Toutes les boutiques"
-        description="Les commerçants qui vendent sur Watshop. Chaque boutique a sa propre adresse et son propre WhatsApp."
-      >
-        <p className="text-sm text-muted-foreground tabular-nums">
-          {formatNumber(total)} boutique{total > 1 ? "s" : ""}
-          {filtre ? " correspondent à votre recherche" : " en ligne"}
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
+      <div className="mb-8 flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Toutes les boutiques</h1>
+        <p className="text-muted-foreground">
+          Les commerçants qui vendent sur Watshop. Chaque boutique a sa propre adresse et son
+          propre WhatsApp.
         </p>
-      </MarketplacePageHeader>
+      </div>
 
-      <Filters params={params} avecTri={false} />
+      <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
+        <aside className="hidden lg:block">
+          <FilterControls params={params} chemin={CHEMIN} />
+        </aside>
 
-      {items.length === 0 ? (
-        <AucunResultat titre="Aucune boutique trouvée" filtre={filtre} />
-      ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((shop) => (
-            <ShopCard key={shop.id} shop={shop} />
-          ))}
-        </ul>
-      )}
+        <div>
+          {/* Pas de tri ici : une boutique n'a pas de prix, et trier par nom
+              n'apporterait rien qu'une liste alphabétique. */}
+          <div className="mb-8 lg:hidden">
+            <FiltersMobile actifs={actifs}>
+              <FilterControls params={params} chemin={CHEMIN} />
+            </FiltersMobile>
+          </div>
 
-      <Pagination params={params} total={total} chemin="/boutiques" />
+          <Suspense key={JSON.stringify(params)} fallback={<ShopGridSkeleton />}>
+            <ListeBoutiques params={params} />
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }

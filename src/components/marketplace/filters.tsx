@@ -1,115 +1,153 @@
-"use client";
-
-import type { ChangeEvent } from "react";
-import { usePathname } from "next/navigation";
-import { Search, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
+import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { COUNTRIES } from "@/lib/phone";
 import { SHOP_CATEGORIES, categorySlug } from "@/lib/shop/categories";
-import { TRIS, type MarketplaceParams } from "@/lib/marketplace/params";
+import { toQueryString, type MarketplaceParams } from "@/lib/marketplace/params";
+import { cn } from "@/lib/utils";
 
 /**
- * Barre de filtres.
+ * Filtres du marketplace, dans la disposition de Your Next Store (MIT) : une
+ * colonne à gauche sur grand écran, un panneau coulissant sur téléphone.
  *
- * Un `<form method="get">` tout simple plutôt qu'un état React poussé dans
- * l'URL : la page est déjà rendue côté serveur, et une recherche doit marcher
- * sur un Android d'entrée de gamme dont le JavaScript n'a pas fini de charger.
- * Le bouton « Filtrer » suffit ; le JavaScript, quand il est là, ne fait
- * qu'éviter d'avoir à l'atteindre après chaque choix.
+ * Une différence de mécanisme assumée. YNS pousse chaque changement de filtre
+ * par le routeur côté client ; ici ce sont de vrais liens et un vrai formulaire
+ * GET. Le résultat visible est le même, mais il marche avant que le JavaScript
+ * ait fini de charger — ce qui, sur un Android d'entrée de gamme en 3G, n'est
+ * pas un détail.
  *
- * `page` n'est volontairement pas un champ du formulaire : changer un filtre
- * renvoie donc à la page 1, ce qui est le seul comportement correct — la page 7
- * d'un résultat n'a rien à voir avec la page 7 du suivant.
- *
- * Les listes déroulantes sont natives : sur téléphone elles ouvrent le sélecteur
- * du système, plus rapide et plus familier qu'un menu recréé en HTML.
+ * Deux filtres seulement, parce que la base n'en porte que deux : la catégorie
+ * de la boutique et son pays. Les facettes de YNS (marques, collections,
+ * fourchette de prix, déclinaisons) n'ont pas d'équivalent ici, et en afficher
+ * qui ne filtreraient rien serait pire que de ne pas les afficher.
  */
-const CLASSE_SELECT =
-  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-auto";
 
-export function Filters({
+/** Un choix de filtre : un lien qui pose la valeur, ou la retire si elle est active. */
+function OptionFiltre({
+  actif,
+  href,
+  children,
+}: {
+  actif: boolean;
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <li>
+      <Link
+        href={href}
+        aria-current={actif ? "true" : undefined}
+        className={cn(
+          "block rounded-md px-2 py-1.5 text-sm transition-colors",
+          actif
+            ? "bg-secondary font-medium text-foreground"
+            : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+        )}
+      >
+        {children}
+      </Link>
+    </li>
+  );
+}
+
+function Groupe({ titre, children }: { titre: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        {titre}
+      </p>
+      <ul className="flex flex-col">{children}</ul>
+    </div>
+  );
+}
+
+export function FilterControls({
   params,
-  avecTri,
+  chemin,
 }: {
   params: MarketplaceParams;
-  /** Le tri par prix n'est proposé que sur les produits. */
-  avecTri: boolean;
+  chemin: string;
 }) {
-  const pathname = usePathname();
+  // Changer un filtre renvoie à la page 1 : la page 7 d'un résultat n'a rien à
+  // voir avec la page 7 du suivant.
+  const lien = (modif: Partial<MarketplaceParams>) =>
+    `${chemin}${toQueryString({ ...params, ...modif, page: 1 })}`;
 
-  function soumettre(event: ChangeEvent<HTMLSelectElement>) {
-    event.currentTarget.form?.requestSubmit();
-  }
+  const filtreActif = Boolean(params.q || params.categorie || params.pays);
 
   return (
-    <form action={pathname} method="get" className="flex flex-col gap-3">
-      <div className="flex gap-2">
+    <div className="flex flex-col gap-6">
+      {/* La recherche reste un formulaire : elle a besoin d'une saisie. Les
+          filtres actifs y sont recopiés en champs cachés, sinon chercher les
+          effacerait. */}
+      <form action={chemin} method="get" className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             name="q"
             defaultValue={params.q}
-            placeholder={avecTri ? "Rechercher un produit…" : "Rechercher une boutique…"}
+            placeholder="Rechercher…"
             className="h-10 pl-9"
             aria-label="Rechercher"
           />
         </div>
-        <Button type="submit" className="h-10">
-          <SlidersHorizontal className="sm:hidden" />
-          <span className="hidden sm:inline">Filtrer</span>
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <select
-          name="categorie"
-          defaultValue={params.categorie ? categorySlug(params.categorie) : ""}
-          onChange={soumettre}
-          className={CLASSE_SELECT}
-          aria-label="Catégorie"
-        >
-          <option value="">Toutes les catégories</option>
-          {SHOP_CATEGORIES.map((categorie) => (
-            <option key={categorie} value={categorySlug(categorie)}>
-              {categorie}
-            </option>
-          ))}
-        </select>
-
-        <select
-          name="pays"
-          defaultValue={params.pays ?? ""}
-          onChange={soumettre}
-          className={CLASSE_SELECT}
-          aria-label="Pays"
-        >
-          <option value="">Tous les pays</option>
-          {COUNTRIES.map((pays) => (
-            <option key={pays.code} value={pays.code}>
-              {pays.name}
-            </option>
-          ))}
-        </select>
-
-        {avecTri ? (
-          <select
-            name="tri"
-            defaultValue={params.tri}
-            onChange={soumettre}
-            className={CLASSE_SELECT}
-            aria-label="Trier"
-          >
-            {TRIS.map((tri) => (
-              <option key={tri.valeur} value={tri.valeur}>
-                {tri.label}
-              </option>
-            ))}
-          </select>
+        {params.categorie ? (
+          <input type="hidden" name="categorie" value={categorySlug(params.categorie)} />
         ) : null}
-      </div>
-    </form>
+        {params.pays ? <input type="hidden" name="pays" value={params.pays} /> : null}
+        {params.tri !== "recent" ? <input type="hidden" name="tri" value={params.tri} /> : null}
+        <Button type="submit" size="icon" className="size-10 shrink-0" aria-label="Rechercher">
+          <Search />
+        </Button>
+      </form>
+
+      <Groupe titre="Catégorie">
+        <OptionFiltre actif={!params.categorie} href={lien({ categorie: null })}>
+          Toutes les catégories
+        </OptionFiltre>
+        {SHOP_CATEGORIES.map((categorie) => {
+          const actif = params.categorie === categorie;
+          return (
+            <OptionFiltre
+              key={categorie}
+              actif={actif}
+              href={lien({ categorie: actif ? null : categorie })}
+            >
+              {categorie}
+            </OptionFiltre>
+          );
+        })}
+      </Groupe>
+
+      <Groupe titre="Pays">
+        <OptionFiltre actif={!params.pays} href={lien({ pays: null })}>
+          Tous les pays
+        </OptionFiltre>
+        {COUNTRIES.map((pays) => {
+          const actif = params.pays === pays.code;
+          return (
+            <OptionFiltre
+              key={pays.code}
+              actif={actif}
+              href={lien({ pays: actif ? null : pays.code })}
+            >
+              {pays.name}
+            </OptionFiltre>
+          );
+        })}
+      </Groupe>
+
+      {filtreActif ? (
+        <Link
+          href={chemin}
+          className="px-2 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          Tout effacer
+        </Link>
+      ) : null}
+    </div>
   );
 }
