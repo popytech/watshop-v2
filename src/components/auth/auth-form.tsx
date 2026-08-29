@@ -20,6 +20,8 @@ import { requestOtp, verifyOtp } from "@/lib/auth/actions";
 import { initialAuthState, OTP_LENGTH } from "@/lib/auth/state";
 import type { Channel } from "@/lib/auth/schemas";
 import { COUNTRIES, DEFAULT_COUNTRY_CODE, getCountry } from "@/lib/phone";
+import { SIGNUP_ROLES, type SignupRole } from "@/lib/auth/roles";
+import { cn } from "@/lib/utils";
 
 import { GoogleButton } from "@/components/auth/google-button";
 
@@ -31,6 +33,7 @@ export function AuthForm({ mode, next, agentCode }: Props) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<SignupRole>("user");
 
   const [requestState, requestAction, requestPending] = useActionState(
     requestOtp,
@@ -62,6 +65,7 @@ export function AuthForm({ mode, next, agentCode }: Props) {
           <input type="hidden" name="label" value={requestState.label ?? ""} />
           <input type="hidden" name="countryCode" value={countryCode} />
           <input type="hidden" name="name" value={name} />
+          <input type="hidden" name="role" value={role} />
 
           <Field>
             <FieldLabel htmlFor="token">Code de vérification</FieldLabel>
@@ -116,6 +120,7 @@ export function AuthForm({ mode, next, agentCode }: Props) {
             <input type="hidden" name="name" value={name} />
             <input type="hidden" name="phone" value={phone} />
             <input type="hidden" name="email" value={email} />
+            <input type="hidden" name="role" value={role} />
             {agentCode ? <input type="hidden" name="agentCode" value={agentCode} /> : null}
             <Button type="submit" variant="link" size="sm" disabled={requestPending}>
               {requestPending ? <Loader2 className="animate-spin" /> : null}
@@ -147,6 +152,34 @@ export function AuthForm({ mode, next, agentCode }: Props) {
           {agentCode ? <input type="hidden" name="agentCode" value={agentCode} /> : null}
 
           <FieldGroup className="gap-4">
+            {mode === "register" ? (
+              <Field>
+                <FieldLabel htmlFor="role">Vous êtes</FieldLabel>
+                <input type="hidden" name="role" value={role} />
+                <div id="role" className="grid grid-cols-2 gap-2">
+                  {SIGNUP_ROLES.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setRole(option.value)}
+                      aria-pressed={role === option.value}
+                      className={cn(
+                        "flex flex-col gap-0.5 rounded-lg border p-3 text-left transition-colors",
+                        role === option.value
+                          ? "border-primary bg-primary/5"
+                          : "hover:bg-muted/50",
+                      )}
+                    >
+                      <span className="text-sm font-medium">{option.label}</span>
+                      <span className="text-xs leading-snug text-muted-foreground">
+                        {option.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            ) : null}
+
             {mode === "register" ? (
               <Field>
                 <FieldLabel htmlFor="name">Votre nom</FieldLabel>

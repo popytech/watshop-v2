@@ -150,3 +150,74 @@ export async function getShopPartners(shopId: string): Promise<DeliveryPartner[]
 
   return data ?? [];
 }
+
+// ============================================================
+// Revendeur (affiliation produit)
+// ============================================================
+
+export type ResellableProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  promo_price: number | null;
+  reseller_commission_pct: number;
+  product_images: { url: string }[];
+  shops: { name: string; slug: string; currency_symbol: string } | null;
+};
+
+/**
+ * Les produits qui offrent une commission au revendeur. Aucune policy
+ * particulière : ce sont les produits publics, filtrés sur une commission
+ * positive.
+ */
+export async function getResellableProducts(): Promise<ResellableProduct[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("products")
+    .select(
+      "id, name, slug, price, promo_price, reseller_commission_pct, product_images(url), shops(name, slug, currency_symbol)",
+    )
+    .gt("reseller_commission_pct", 0)
+    .order("reseller_commission_pct", { ascending: false })
+    .limit(50);
+
+  return (data ?? []) as unknown as ResellableProduct[];
+}
+
+export type ResellerEarnings = {
+  clicks: number;
+  sales: number;
+  pending: number;
+  confirmed: number;
+  paid: number;
+};
+
+export async function getResellerEarnings(resellerId: string): Promise<ResellerEarnings> {
+  const supabase = await createClient();
+
+  const [clics, ventes] = await Promise.all([
+    supabase
+      .from("affiliate_clicks")
+      .select("*", { count: "exact", head: true })
+      .eq("referrer_id", resellerId),
+    supabase
+      .from("affiliate_referrals")
+      .select("commission_amount, status")
+      .eq("referrer_id", resellerId),
+  ]);
+
+  const lignes = ventes.data ?? [];
+  const somme = (statut: string) =>
+    lignes
+      .filter((l) => l.status === statut)
+      .reduce((total, l) => total + l.commission_amount, 0);
+
+  return {
+    clicks: clics.count ?? 0,
+    sales: lignes.length,
+    pending: somme("pending"),
+    confirmed: somme("confirmed"),
+    paid: somme("paid"),
+  };
+}

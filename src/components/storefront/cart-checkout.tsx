@@ -27,6 +27,7 @@ import {
 import { createOrder } from "@/lib/order/actions";
 import { initialCheckoutState } from "@/lib/order/state";
 import { useCart } from "@/lib/cart/use-cart";
+import { readAffiliateRef } from "@/lib/affiliate/ref";
 import { formatMoney } from "@/lib/format";
 import { getCountry } from "@/lib/phone";
 
@@ -165,6 +166,9 @@ export function CartCheckout({
           <form action={action}>
             <input type="hidden" name="shopSlug" value={shopSlug} />
             <input type="hidden" name="source" value={source} />
+            {/* Code revendeur mémorisé à l'arrivée sur la boutique : il donne
+                droit à sa commission si la commande aboutit. */}
+            <input type="hidden" name="affiliateCode" value={readAffiliateRef(shopSlug) ?? ""} />
             <input type="hidden" name="countryCode" value={countryCode} />
             {/* Le panier part en JSON ; le serveur relit les prix en base et
                 ignore ceux affichés ici. */}

@@ -16,6 +16,7 @@ export type ProductFormValues = {
   quantity: string;
   sizes: string;
   description: string;
+  resellerCommissionPct: string;
 };
 
 type Props = {
@@ -115,6 +116,26 @@ export function ProductForm({
             <FieldDescription>Séparez par des virgules.</FieldDescription>
           </Field>
         </div>
+
+        <Field>
+          <FieldLabel htmlFor="resellerCommissionPct">
+            Commission revendeur (facultatif)
+          </FieldLabel>
+          <Input
+            id="resellerCommissionPct"
+            name="resellerCommissionPct"
+            inputMode="numeric"
+            className="h-11 sm:max-w-32"
+            placeholder="0"
+            defaultValue={defaultValues.resellerCommissionPct ?? "0"}
+            aria-invalid={Boolean(state.errors?.resellerCommissionPct)}
+          />
+          <FieldDescription>
+            Pourcentage du prix reversé à un revendeur qui vous amène la vente. Laissez 0 pour ne
+            pas proposer ce produit aux revendeurs.
+          </FieldDescription>
+          <FieldError>{state.errors?.resellerCommissionPct}</FieldError>
+        </Field>
 
         <Field>
           <FieldLabel htmlFor="images">Photos</FieldLabel>

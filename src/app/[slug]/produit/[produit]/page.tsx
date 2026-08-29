@@ -10,12 +10,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AddToCart } from "@/components/storefront/add-to-cart";
 import { SharePanel } from "@/components/shop/share-panel";
 import { VisitTracker } from "@/components/storefront/visit-tracker";
+import { AffiliateTracker } from "@/components/storefront/affiliate-tracker";
 import { effectivePrice, getPublicProduct, getPublicShop, sortedImages } from "@/lib/shop/public";
 import { getSiteUrl } from "@/lib/site-url";
 import { formatMoney } from "@/lib/format";
 import { shopPath } from "@/lib/tenant";
 
-type Props = { params: Promise<{ slug: string; produit: string }> };
+type Props = {
+  params: Promise<{ slug: string; produit: string }>;
+  searchParams: Promise<{ ref?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, produit } = await params;
@@ -43,8 +47,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ProductPage({ params }: Props) {
-  const { slug, produit } = await params;
+export default async function ProductPage({ params, searchParams }: Props) {
+  const [{ slug, produit }, { ref }] = await Promise.all([params, searchParams]);
   const shop = await getPublicShop(slug);
   if (!shop) notFound();
 
@@ -85,6 +89,9 @@ export default async function ProductPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <VisitTracker shopId={shop.id} productId={product.id} />
+      {ref ? (
+        <AffiliateTracker shopSlug={shop.slug} productId={product.id} code={ref} />
+      ) : null}
 
       <div className="flex flex-col gap-5">
         <Button asChild variant="ghost" size="sm" className="self-start">

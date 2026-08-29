@@ -85,6 +85,7 @@ export async function requestOtp(_prev: AuthState, formData: FormData): Promise<
     countryCode: formData.get("countryCode") ?? undefined,
     name: (formData.get("name") as string)?.trim() || undefined,
     agentCode: (formData.get("agentCode") as string)?.trim() || undefined,
+    role: (formData.get("role") as string) || undefined,
     mode,
   });
 
@@ -93,7 +94,7 @@ export async function requestOtp(_prev: AuthState, formData: FormData): Promise<
     return { step: "identifier", channel, errors: fieldErrors(parsed.error) };
   }
 
-  const { channel, countryCode, name, agentCode } = parsed.data;
+  const { channel, countryCode, name, agentCode, role } = parsed.data;
   const supabase = await createClient();
 
   // En connexion on ne crée pas de compte : un identifiant inconnu doit dire
@@ -105,6 +106,9 @@ export async function requestOtp(_prev: AuthState, formData: FormData): Promise<
   const metadata: Record<string, string> = { country_code: countryCode };
   if (name) metadata.name = name;
   if (agentCode) metadata.agent_code = agentCode;
+  // Le rôle n'est transmis qu'à l'inscription : une connexion ne doit pas
+  // pouvoir le changer.
+  if (mode === "register") metadata.role = role;
 
   if (channel === "whatsapp") {
     const phone = toE164(parsed.data.phone!, countryCode)!;

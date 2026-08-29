@@ -174,6 +174,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
     quantity: (formData.get("quantity") as string) ?? "",
     description: (formData.get("description") as string) || undefined,
     sizes: (formData.get("sizes") as string) || undefined,
+    resellerCommissionPct: (formData.get("resellerCommissionPct") as string) ?? "",
   });
 
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
@@ -198,6 +199,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       promo_price: parsed.data.promoPrice,
       quantity: parsed.data.quantity,
       sizes: parsed.data.sizes,
+      reseller_commission_pct: parsed.data.resellerCommissionPct,
     })
     .select("id")
     .single();
@@ -234,6 +236,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     quantity: (formData.get("quantity") as string) ?? "",
     description: (formData.get("description") as string) || undefined,
     sizes: (formData.get("sizes") as string) || undefined,
+    resellerCommissionPct: (formData.get("resellerCommissionPct") as string) ?? "",
   });
 
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
@@ -255,6 +258,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
       promo_price: parsed.data.promoPrice,
       quantity: parsed.data.quantity,
       sizes: parsed.data.sizes,
+      reseller_commission_pct: parsed.data.resellerCommissionPct,
     })
     .eq("id", productId);
 

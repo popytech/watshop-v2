@@ -9,7 +9,7 @@
 // satisfait pas (pas de signature d'index implicite) — l'inférence de
 // .select("a, b") retomberait alors sur never.
 
-export type UserRole = "user" | "agent" | "delivery" | "admin";
+export type UserRole = "user" | "agent" | "delivery" | "reseller" | "admin";
 export type VehicleType = "moto" | "velo" | "voiture" | "a_pied";
 export type SubscriptionPlan = "free" | "pro";
 export type OrderSource = "storefront" | "whatsapp" | "manual";

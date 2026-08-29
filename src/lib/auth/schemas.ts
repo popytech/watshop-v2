@@ -35,6 +35,9 @@ export const requestOtpSchema = z
     countryCode,
     name: nameSchema.optional(),
     mode: z.enum(["login", "register"]).default("login"),
+    // Le rôle choisi à l'inscription. 'admin' est volontairement absent, et la
+    // même liste blanche est appliquée par le trigger côté base.
+    role: z.enum(["user", "reseller", "agent", "delivery"]).default("user"),
     // Code de parrainage d'un agent commercial, transmis par le lien
     // d'inscription qu'il partage. Résolu en base par le trigger d'inscription.
     agentCode: z

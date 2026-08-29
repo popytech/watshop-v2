@@ -14,7 +14,10 @@ create extension if not exists "pgcrypto";
 -- Rôles & profils (étend auth.users, géré par Supabase Auth)
 -- ============================================================
 
-create type user_role as enum ('user', 'agent', 'delivery', 'admin');
+-- 'user' = vendeur, 'reseller' = revendeur (affiliation produit). Les deux
+-- programmes sont distincts : l'agent recrute des vendeurs et touche au mois,
+-- le revendeur pousse des produits et touche à la vente.
+create type user_role as enum ('user', 'agent', 'delivery', 'reseller', 'admin');
 create type vehicle_type as enum ('moto', 'velo', 'voiture', 'a_pied');
 create type subscription_plan as enum ('free', 'pro');
 create type order_status as enum ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled');
@@ -558,6 +561,7 @@ as $$
 declare
   v_agent_id uuid;
   v_code text;
+  v_role user_role;
 begin
   -- Le code de parrainage voyage dans les métadonnées d'inscription
   -- (?agent=AG123456). Le résoudre ici, une fois pour toutes, ferme la porte à
@@ -569,7 +573,17 @@ begin
     where agent_code = upper(v_code) and role = 'agent';
   end if;
 
-  insert into public.profiles (id, email, phone, name, avatar_url, agent_id)
+  -- Liste blanche : le rôle vient du formulaire d'inscription, donc du client.
+  -- 'admin' n'y figure pas et n'y figurera jamais — sans ce filtre, n'importe
+  -- qui obtiendrait les droits d'administration en modifiant une requête.
+  v_role := case new.raw_user_meta_data ->> 'role'
+    when 'agent' then 'agent'::user_role
+    when 'delivery' then 'delivery'::user_role
+    when 'reseller' then 'reseller'::user_role
+    else 'user'::user_role
+  end;
+
+  insert into public.profiles (id, email, phone, name, avatar_url, agent_id, role)
   values (
     new.id,
     new.email,
@@ -582,7 +596,8 @@ begin
       new.raw_user_meta_data ->> 'avatar_url',
       new.raw_user_meta_data ->> 'picture'
     ),
-    v_agent_id
+    v_agent_id,
+    v_role
   )
   on conflict (id) do nothing;
 
@@ -651,6 +666,14 @@ end $$;
 
 -- Code lisible et court, dérivé de l'identifiant : pas de tirage aléatoire à
 -- réessayer en cas de collision, et il reste stable pour l'agent.
+create function public.build_affiliate_code(p_id uuid)
+returns text
+language sql
+immutable
+as $$
+  select 'RV' || upper(substr(replace(p_id::text, '-', ''), 1, 6));
+$$;
+
 create function public.build_agent_code(p_id uuid)
 returns text
 language sql
@@ -669,6 +692,11 @@ begin
   if new.role = 'agent' and new.agent_code is null then
     new.agent_code := public.build_agent_code(new.id);
   end if;
+
+  if new.role = 'reseller' and new.affiliate_code is null then
+    new.affiliate_code := public.build_affiliate_code(new.id);
+  end if;
+
   return new;
 end;
 $$;

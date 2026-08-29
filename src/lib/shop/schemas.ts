@@ -89,6 +89,13 @@ export const productSchema = z
       .transform((value) => (value ? Number(value.replace(/[^\d]/g, "")) : 0))
       .pipe(z.number().int().min(0).max(1_000_000)),
     description: z.string().trim().max(1000, "Description trop longue.").optional(),
+    // Part du prix reversée au revendeur qui amène la vente. 0 = produit non
+    // proposé au programme d'affiliation.
+    resellerCommissionPct: z
+      .string()
+      .trim()
+      .transform((value) => (value ? Number(value.replace(/[^\d]/g, "")) : 0))
+      .pipe(z.number().int().min(0, "Minimum 0 %").max(50, "Maximum 50 %")),
     // Saisi en texte libre ("S, M, L") : plus simple à taper sur un téléphone
     // qu'une interface à tags.
     sizes: z

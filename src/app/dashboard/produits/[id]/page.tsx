@@ -84,6 +84,7 @@ export default async function EditProductPage({ params }: Props) {
               quantity: String(product.quantity),
               sizes: (product.sizes ?? []).join(", "),
               description: product.description ?? "",
+              resellerCommissionPct: String(product.reseller_commission_pct),
             }}
           />
         </CardContent>

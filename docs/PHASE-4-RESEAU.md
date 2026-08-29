@@ -14,16 +14,32 @@ attend GNAKRYPAY.
 transfèrent pour passer en Pro. Tant qu'il est vide, l'écran d'abonnement le dit
 au lieu d'afficher un numéro faux.
 
-**Attribuer un rôle** — il n'y a volontairement pas d'écran pour ça :
+**Le rôle se choisit à l'inscription** : vendeur, revendeur, agent ou livreur.
+La migration `0005` ajoute le rôle `reseller` et fait porter ce choix par les
+métadonnées d'inscription.
+
+> ⚠️ Ce choix vient du navigateur. Le trigger applique donc une **liste blanche**
+> côté base : `admin` n'y figure pas et ne peut pas être obtenu en modifiant la
+> requête. Et une fois le compte créé, le rôle ne se change plus tout seul — le
+> trigger anti-escalade de la Phase 1 le refuse.
+
+Pour corriger un rôle après coup, ou nommer un administrateur :
 
 ```sql
-update public.profiles set role = 'agent'    where email = 'agent@exemple.com';
-update public.profiles set role = 'delivery' where phone = '224622123456';
+update public.profiles set role = 'admin' where email = 'vous@exemple.com';
 ```
 
-Le code agent (`AG` + 6 caractères) est attribué par un trigger dès le passage au
-rôle `agent`. Il est dérivé de l'identifiant : stable, et sans tirage aléatoire à
-réessayer en cas de collision.
+Les codes (`AG…` pour l'agent, `RV…` pour le revendeur) sont attribués par un
+trigger dès le passage au rôle. Ils sont dérivés de l'identifiant : stables, et
+sans tirage aléatoire à réessayer en cas de collision.
+
+### Un point à trancher côté métier
+
+Un compte peut se déclarer **agent** tout seul, donc générer un code de
+parrainage et recruter. Le garde-fou financier existe déjà en aval — les
+versements passent par `agent_commission_payouts`, créés par un administrateur,
+jamais automatiquement. Rien n'est donc payé sans validation humaine. Si tu
+préfères filtrer en amont, il faudra un écran de validation des agents.
 
 ---
 
@@ -93,6 +109,33 @@ d'abonnement ne bougeront.
 
 ---
 
+## 4 bis. Revendeurs — `/revendeur`
+
+Le programme d'affiliation produit existait en base depuis la Phase 0
+(`affiliate_code`, `affiliate_referrals`, `products.reseller_commission_pct`)
+sans qu'aucun rôle ne permette de s'en servir. C'est maintenant le cas.
+
+Le vendeur fixe une **commission revendeur** par produit, dans le formulaire
+produit (0 % par défaut = produit non proposé). Le revendeur voit dans son
+espace tous les produits qui en offrent une, avec le gain correspondant, et
+copie son lien : `/<boutique>/produit/<produit>?ref=RV123456`.
+
+Le code est mémorisé dans le navigateur de l'acheteur **par boutique, pendant
+7 jours** : sans ça, un visiteur qui arrive par le lien puis navigue avant de
+commander ferait perdre sa commission au revendeur. Une durée plus longue
+reviendrait à payer pour une vente qu'il n'a pas provoquée.
+
+À la commande, la commission est calculée avec le pourcentage **relu en base**,
+produit par produit — jamais celui transmis par le client — et créée en
+`pending`. Elle ne devient acquise que lorsque la commande est livrée : sinon
+une commande annulée paierait quand même.
+
+L'enregistrement des clics passe par le serveur (`/api/affiliation`) :
+`affiliate_clicks` n'a aucune policy d'insertion, un revendeur ne peut donc pas
+gonfler ses propres chiffres depuis son compte.
+
+---
+
 ## 5. Vérifier que ça marche
 
 1. Passer un compte en `agent` par SQL, se connecter → on atterrit sur `/agent`,
@@ -107,3 +150,8 @@ d'abonnement ne bougeront.
    l'API) → refusé par le trigger.
 6. Déclarer un paiement, le confirmer depuis `/admin/paiements` → le vendeur
    passe en Pro et `subscriptions.ends_at` avance d'un mois.
+7. S'inscrire en choisissant « Revendeur » → on atterrit sur `/revendeur` avec un
+   code `RV…`. Mettre une commission sur un produit côté vendeur, copier le lien,
+   l'ouvrir en navigation privée, commander → la commission apparaît en attente.
+8. Tenter de s'inscrire en forçant `role=admin` dans la requête → le compte est
+   créé en `user`.

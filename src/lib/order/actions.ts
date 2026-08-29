@@ -36,6 +36,7 @@ export async function createOrder(
     deliveryZoneId: (formData.get("deliveryZoneId") as string) || null,
     note: (formData.get("note") as string) || undefined,
     countryCode: (formData.get("countryCode") as string) || undefined,
+    affiliateCode: (formData.get("affiliateCode") as string)?.trim() || undefined,
     items: parseCartField(formData.get("items")),
   });
 
@@ -58,7 +59,7 @@ export async function createOrder(
 
   const { data: products } = await admin
     .from("products")
-    .select("id, name, price, promo_price, is_active, shop_id")
+    .select("id, name, price, promo_price, is_active, shop_id, reseller_commission_pct")
     .in(
       "id",
       input.items.map((item) => item.productId),
@@ -67,6 +68,7 @@ export async function createOrder(
   const catalogue = new Map((products ?? []).map((product) => [product.id, product]));
 
   const lines = [];
+  const commissions: { productId: string; pct: number; montantLigne: number }[] = [];
   for (const item of input.items) {
     const product = catalogue.get(item.productId);
     if (!product || product.shop_id !== shop.id || !product.is_active) {
@@ -87,6 +89,12 @@ export async function createOrder(
       unit_price: unitPrice,
       quantity: item.quantity,
       size: item.size,
+    });
+
+    commissions.push({
+      productId: product.id,
+      pct: product.reseller_commission_pct,
+      montantLigne: unitPrice * item.quantity,
     });
   }
 
@@ -142,6 +150,12 @@ export async function createOrder(
     return { message: "Impossible d'enregistrer la commande. Réessayez." };
   }
 
+  await recordAffiliateCommissions({
+    code: input.affiliateCode,
+    orderId,
+    commissions,
+  });
+
   await notifySeller({
     siteUrl: await getSiteUrl(),
     shopName: shop.name,
@@ -162,6 +176,50 @@ export async function createOrder(
   revalidatePath("/dashboard/commandes");
 
   redirect(`/${shop.slug}/commande/${orderId}`);
+}
+
+/**
+ * Crédite le revendeur dont le lien a amené la commande.
+ *
+ * Le pourcentage est relu en base, produit par produit — jamais transmis par
+ * le client. La commission naît en 'pending' : elle ne devient acquise que
+ * lorsque la commande est réellement livrée, sinon une commande annulée
+ * paierait quand même.
+ */
+async function recordAffiliateCommissions(params: {
+  code?: string;
+  orderId: string;
+  commissions: { productId: string; pct: number; montantLigne: number }[];
+}): Promise<void> {
+  if (!params.code) return;
+
+  const admin = createAdminClient();
+  const code = params.code.toUpperCase();
+
+  const { data: reseller } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("affiliate_code", code)
+    .eq("role", "reseller")
+    .maybeSingle();
+
+  if (!reseller) return;
+
+  const lignes = params.commissions
+    .filter((c) => c.pct > 0)
+    .map((c) => ({
+      referrer_id: reseller.id,
+      product_id: c.productId,
+      order_id: params.orderId,
+      affiliate_code: code,
+      commission_pct: c.pct,
+      commission_amount: Math.round((c.montantLigne * c.pct) / 100),
+      status: "pending" as const,
+    }));
+
+  if (lignes.length === 0) return;
+
+  await admin.from("affiliate_referrals").insert(lignes);
 }
 
 /**

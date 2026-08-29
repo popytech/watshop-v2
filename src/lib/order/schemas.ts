@@ -34,6 +34,12 @@ export const checkoutSchema = z
     countryCode: z
       .enum(COUNTRIES.map((c) => c.code) as [string, ...string[]])
       .default(DEFAULT_COUNTRY_CODE),
+    affiliateCode: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^RV[A-Z0-9]{6}$/, "Code revendeur invalide.")
+      .optional(),
     items: z.array(cartLineSchema).min(1, "Votre panier est vide."),
   })
   .superRefine((data, ctx) => {
