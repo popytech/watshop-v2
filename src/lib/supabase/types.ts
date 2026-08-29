@@ -80,6 +80,8 @@ type Product = {
   is_sponsored: boolean;
   reseller_commission_pct: number;
   view_count: number;
+  /** Colonne générée : promo si elle est valide, prix normal sinon. */
+  effective_price: number;
   created_at: string;
 }
 
@@ -244,10 +246,14 @@ type PushToken = {
 
 // Forme attendue par supabase-js : sans Relationships (et sans Views/Functions
 // plus bas), l'inférence des colonnes dans .select("a, b") retombe sur never.
-type TableDef<Row> = {
+//
+// `Generee` liste les colonnes calculées par la base : elles se lisent mais ne
+// s'écrivent pas, et Postgres rejette la requête qui essaie. Les retirer de
+// Insert et Update fait dire non au compilateur plutôt qu'au serveur.
+type TableDef<Row, Generee extends keyof Row = never> = {
   Row: Row;
-  Insert: Partial<Row>;
-  Update: Partial<Row>;
+  Insert: Partial<Omit<Row, Generee>>;
+  Update: Partial<Omit<Row, Generee>>;
   Relationships: [];
 };
 
@@ -257,7 +263,7 @@ export type Database = {
       profiles: TableDef<Profile>;
       shops: TableDef<Shop>;
       categories: TableDef<Category>;
-      products: TableDef<Product>;
+      products: TableDef<Product, "effective_price">;
       product_images: TableDef<ProductImage>;
       delivery_zones: TableDef<DeliveryZone>;
       delivery_partners: TableDef<DeliveryPartner>;

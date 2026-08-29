@@ -1,0 +1,171 @@
+import "server-only";
+
+import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
+import { PAGE_SIZE, type MarketplaceParams } from "@/lib/marketplace/params";
+
+type Shop = Database["public"]["Tables"]["shops"]["Row"];
+type Product = Database["public"]["Tables"]["products"]["Row"];
+
+/*
+ * Lectures du marketplace, faites avec le client anonyme.
+ *
+ * Aucune condition de visibilité n'est écrite ici : les policies posées en
+ * Phase 3 ne laissent sortir que les boutiques publiées et actives, et les
+ * produits actifs qui en dépendent. Répéter `published_at is not null` dans
+ * chaque requête donnerait deux endroits où se tromper — et le jour où l'un des
+ * deux oublie la condition, c'est la RLS qui tient.
+ */
+
+export type MarketplaceShop = Shop & {
+  /** Compte des produits visibles, remonté par la jointure. */
+  products: { count: number }[];
+};
+
+export type MarketplaceProduct = Product & {
+  product_images: { url: string; alt_text: string; position: number }[];
+  shops: Pick<Shop, "slug" | "name" | "currency_symbol" | "category">;
+};
+
+export type Page<T> = {
+  items: T[];
+  total: number;
+  page: number;
+};
+
+/**
+ * PostgREST refuse une plage qui commence après la dernière ligne : demander
+ * `?page=2` sur un résultat qui tient en une page renvoie l'erreur PGRST103, et
+ * non une liste vide. Une URL tapée à la main ne doit pas rendre un 500, donc on
+ * la traite pour ce qu'elle est — une page sans résultat — en gardant le total
+ * réel pour que l'appelant puisse en faire un 404.
+ */
+const PLAGE_HORS_LIMITES = "PGRST103";
+
+/**
+ * Prépare un terme pour un filtre PostgREST.
+ *
+ * `.or()` reçoit une chaîne dont la virgule sépare les conditions et la
+ * parenthèse les groupes : un terme qui en contient casserait la requête, ou
+ * pire, y ajouterait une condition. Ces caractères sont retirés plutôt
+ * qu'échappés — personne ne cherche « robe, wax » — et `%` avec eux, sans quoi
+ * une recherche sur `%` seul retournerait le catalogue entier.
+ */
+function termeRecherche(q: string): string | null {
+  const nettoye = q.replace(/[,()%*\\"]/g, " ").trim();
+  return nettoye.length >= 2 ? nettoye : null;
+}
+
+// Les filtres sont appliqués par une fonction à part parce qu'ils servent deux
+// fois : à la requête paginée, et au recomptage quand la page demandée est hors
+// limites. Les dupliquer, c'est se garantir un total qui ne correspond pas à la
+// liste affichée.
+type Filtrable = {
+  eq: (colonne: string, valeur: string) => Filtrable;
+  or: (filtre: string) => Filtrable;
+};
+
+function filtrerBoutiques<T extends Filtrable>(requete: T, params: MarketplaceParams): T {
+  let sortie = requete;
+  if (params.categorie) sortie = sortie.eq("category", params.categorie) as T;
+  if (params.pays) sortie = sortie.eq("country_code", params.pays) as T;
+
+  const terme = termeRecherche(params.q);
+  if (terme) sortie = sortie.or(`name.ilike.%${terme}%,description.ilike.%${terme}%`) as T;
+
+  return sortie;
+}
+
+function filtrerProduits<T extends Filtrable>(requete: T, params: MarketplaceParams): T {
+  let sortie = requete;
+  if (params.categorie) sortie = sortie.eq("shops.category", params.categorie) as T;
+  if (params.pays) sortie = sortie.eq("shops.country_code", params.pays) as T;
+
+  const terme = termeRecherche(params.q);
+  if (terme) sortie = sortie.or(`name.ilike.%${terme}%,description.ilike.%${terme}%`) as T;
+
+  return sortie;
+}
+
+export async function listShops(params: MarketplaceParams): Promise<Page<MarketplaceShop>> {
+  const supabase = await createClient();
+  const debut = (params.page - 1) * PAGE_SIZE;
+
+  const requete = filtrerBoutiques(
+    supabase.from("shops").select("*, products(count)", { count: "exact" }),
+    params,
+  )
+    // Les boutiques mises en avant d'abord, les vérifiées ensuite, puis les plus
+    // récemment publiées. Pas de tri par prix ici : une boutique n'en a pas.
+    .order("is_sponsored", { ascending: false })
+    .order("is_verified", { ascending: false })
+    .order("published_at", { ascending: false })
+    .range(debut, debut + PAGE_SIZE - 1);
+
+  const { data, count, error } = await requete;
+
+  if (error?.code === PLAGE_HORS_LIMITES) {
+    const { count: total } = await filtrerBoutiques(
+      supabase.from("shops").select("id", { count: "exact", head: true }),
+      params,
+    );
+    return { items: [], total: total ?? 0, page: params.page };
+  }
+  if (error) throw error;
+
+  return {
+    items: (data ?? []) as unknown as MarketplaceShop[],
+    total: count ?? 0,
+    page: params.page,
+  };
+}
+
+const SELECT_PRODUITS =
+  "*, product_images(url, alt_text, position), shops!inner(slug, name, currency_symbol, category)";
+
+export async function listProducts(params: MarketplaceParams): Promise<Page<MarketplaceProduct>> {
+  const supabase = await createClient();
+  const debut = (params.page - 1) * PAGE_SIZE;
+
+  // `!inner` : sans lui, filtrer sur la catégorie de la boutique laisserait
+  // passer les produits dont la jointure est vide au lieu de les écarter.
+  let requete = filtrerProduits(
+    supabase.from("products").select(SELECT_PRODUITS, { count: "exact" }),
+    params,
+  );
+
+  if (params.tri === "prix-croissant") {
+    requete = requete.order("effective_price", { ascending: true });
+  } else if (params.tri === "prix-decroissant") {
+    requete = requete.order("effective_price", { ascending: false });
+  } else {
+    // Les produits mis en avant ne remontent que sur le tri par défaut : les
+    // faire passer devant un tri par prix afficherait une liste qui contredit
+    // son propre en-tête.
+    requete = requete
+      .order("is_sponsored", { ascending: false })
+      .order("created_at", { ascending: false });
+  }
+
+  const { data, count, error } = await requete.range(debut, debut + PAGE_SIZE - 1);
+
+  if (error?.code === PLAGE_HORS_LIMITES) {
+    const { count: total } = await filtrerProduits(
+      supabase.from("products").select("id, shops!inner(category)", { count: "exact", head: true }),
+      params,
+    );
+    return { items: [], total: total ?? 0, page: params.page };
+  }
+  if (error) throw error;
+
+  return {
+    items: (data ?? []) as unknown as MarketplaceProduct[],
+    total: count ?? 0,
+    page: params.page,
+  };
+}
+
+/** Nombre de produits visibles d'une boutique, tel que remonté par la jointure. */
+export function productCount(shop: MarketplaceShop): number {
+  return shop.products?.[0]?.count ?? 0;
+}

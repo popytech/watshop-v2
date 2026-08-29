@@ -11,6 +11,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     { url: siteUrl, changeFrequency: "weekly", priority: 1 },
+    // Les deux entrées du marketplace. Seule leur première page est déclarée :
+    // les suivantes n'ont pas de contenu propre, elles redécoupent la même
+    // liste — et les boutiques y figurent déjà une par une ci-dessous.
+    { url: `${siteUrl}/boutiques`, changeFrequency: "daily" as const, priority: 0.9 },
+    { url: `${siteUrl}/produits`, changeFrequency: "daily" as const, priority: 0.9 },
     ...shops.map((shop) => ({
       url: `${siteUrl}${shopPath(shop.slug)}`,
       lastModified: new Date(shop.created_at),

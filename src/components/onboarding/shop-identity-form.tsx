@@ -16,19 +16,9 @@ import {
 } from "@/components/ui/select";
 import { saveShopIdentity } from "@/lib/shop/actions";
 import { initialFormState } from "@/lib/shop/state";
+import { SHOP_CATEGORIES } from "@/lib/shop/categories";
 import { COUNTRIES } from "@/lib/phone";
 import { slugify } from "@/lib/tenant";
-
-const CATEGORIES = [
-  "Mode & vêtements",
-  "Beauté & cosmétiques",
-  "Alimentation",
-  "Électronique",
-  "Maison & décoration",
-  "Enfants & bébé",
-  "Services",
-  "Autre",
-];
 
 type Props = {
   defaultValues: {
@@ -99,7 +89,7 @@ export function ShopIdentityForm({ defaultValues, siteUrl }: Props) {
               <SelectValue placeholder="Que vendez-vous ?" />
             </SelectTrigger>
             <SelectContent>
-              {CATEGORIES.map((item) => (
+              {SHOP_CATEGORIES.map((item) => (
                 <SelectItem key={item} value={item}>
                   {item}
                 </SelectItem>

@@ -2,13 +2,22 @@ import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
 
+// Ancres préfixées par « / » : ce pied de page sert aussi au marketplace, d'où
+// un « #tarifs » seul ne mènerait nulle part.
 const COLONNES = [
+  {
+    titre: "Acheter",
+    liens: [
+      { href: "/boutiques", label: "Toutes les boutiques" },
+      { href: "/produits", label: "Tous les produits" },
+    ],
+  },
   {
     titre: "Produit",
     liens: [
-      { href: "#fonctionnement", label: "Fonctionnement" },
-      { href: "#tarifs", label: "Tarifs" },
-      { href: "#questions", label: "Questions" },
+      { href: "/#fonctionnement", label: "Fonctionnement" },
+      { href: "/#tarifs", label: "Tarifs" },
+      { href: "/#questions", label: "Questions" },
     ],
   },
   {
@@ -33,7 +42,9 @@ export function LandingFooter() {
             </p>
           </div>
 
-          <div className="flex gap-12">
+          {/* Trois colonnes tiennent mal côte à côte sur 360 px : elles passent
+              à la ligne plutôt que de se serrer. */}
+          <div className="flex flex-wrap gap-8 sm:gap-12">
             {COLONNES.map((colonne) => (
               <div key={colonne.titre} className="flex flex-col gap-2">
                 <p className="text-sm font-medium">{colonne.titre}</p>

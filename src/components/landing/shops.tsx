@@ -1,5 +1,9 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+
 import { Beam } from "@/components/landing/beam";
 import { Section, SectionHeader } from "@/components/landing/section";
+import { Button } from "@/components/ui/button";
 import { Marquee } from "@/components/ui/marquee";
 import { formatMoney } from "@/lib/format";
 
@@ -53,9 +57,17 @@ export function Shops() {
           </Marquee>
         </div>
 
-        <p className="text-sm text-muted-foreground">
-          Chiffre d&apos;affaires déclaré par les commerçants.
-        </p>
+        <div className="flex flex-col items-center gap-3">
+          <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
+            <Link href="/boutiques">
+              Voir toutes les boutiques
+              <ArrowRight />
+            </Link>
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Chiffre d&apos;affaires déclaré par les commerçants.
+          </p>
+        </div>
       </div>
     </Section>
   );

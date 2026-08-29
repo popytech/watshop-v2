@@ -9,6 +9,9 @@
 --   - RLS activé partout : legacy contournait systématiquement RLS via la clé service_role
 
 create extension if not exists "pgcrypto";
+-- Recherche par sous-chaîne du marketplace : un `ilike '%terme%'` ne peut pas
+-- s'appuyer sur un index B-tree, son motif ne commençant pas par une constante.
+create extension if not exists "pg_trgm";
 
 -- ============================================================
 -- Rôles & profils (étend auth.users, géré par Supabase Auth)
@@ -101,6 +104,11 @@ alter table public.shops
 
 create index shops_user_id_idx on public.shops (user_id);
 create index shops_slug_idx on public.shops (slug);
+-- Filtres et recherche du marketplace.
+create index shops_category_idx on public.shops (category);
+create index shops_country_code_idx on public.shops (country_code);
+create index shops_published_at_idx on public.shops (published_at desc);
+create index shops_name_trgm_idx on public.shops using gin (name gin_trgm_ops);
 
 -- ============================================================
 -- Catalogue
@@ -130,12 +138,27 @@ create table public.products (
   is_sponsored boolean not null default false,
   reseller_commission_pct integer not null default 0,
   view_count integer not null default 0,
+  -- Prix réellement affiché, promo comprise. Le marketplace trie dessus en SQL,
+  -- sur des pages tirées du catalogue entier : le calculer côté application
+  -- trierait la page, pas le catalogue. Colonne générée, donc jamais écrite à
+  -- la main et jamais divergente de effectivePrice() côté TypeScript.
+  effective_price integer generated always as (
+    case
+      when promo_price is not null and promo_price < price then promo_price
+      else price
+    end
+  ) stored,
   created_at timestamptz not null default now()
 );
 
 create index products_shop_id_idx on public.products (shop_id);
 create unique index products_shop_slug_idx on public.products (shop_id, slug);
 create index products_category_id_idx on public.products (category_id);
+create index products_effective_price_idx on public.products (effective_price);
+create index products_created_at_idx on public.products (created_at desc);
+create index products_sponsored_idx on public.products (is_sponsored desc, created_at desc);
+-- Recherche du marketplace : `ilike '%terme%'`, qu'aucun B-tree ne sert.
+create index products_name_trgm_idx on public.products using gin (name gin_trgm_ops);
 
 create table public.product_images (
   id uuid primary key default gen_random_uuid(),

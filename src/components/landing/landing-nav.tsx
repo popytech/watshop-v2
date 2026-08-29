@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
+// `route` sort de la page d'accueil : un <Link> plutôt qu'une ancre, pour que
+// la navigation reste côté client et la page soit préchargée au survol.
 const LIENS = [
   { href: "#fonctionnement", label: "Fonctionnement" },
-  { href: "#boutiques", label: "Boutiques" },
+  { href: "/boutiques", label: "Boutiques", route: true },
   { href: "#tarifs", label: "Tarifs" },
   { href: "#questions", label: "Questions" },
 ];
@@ -22,7 +24,11 @@ export function LandingNav({ connecte }: { connecte: boolean }) {
         <nav className="hidden items-center gap-1 md:flex">
           {LIENS.map((lien) => (
             <Button key={lien.href} asChild variant="ghost" size="sm">
-              <a href={lien.href}>{lien.label}</a>
+              {lien.route ? (
+                <Link href={lien.href}>{lien.label}</Link>
+              ) : (
+                <a href={lien.href}>{lien.label}</a>
+              )}
             </Button>
           ))}
         </nav>
