@@ -4,20 +4,18 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Glow } from "@/components/landing/glow";
-import { Mockup, MockupFrame } from "@/components/landing/mockup";
+import { HeroShowcase } from "@/components/landing/hero-showcase";
 import { FacebookIcon, InstagramIcon, TiktokIcon } from "@/components/brand/social-icons";
-import { formatMoney } from "@/lib/format";
 
 /**
  * Hero.
  *
- * Reprend la composition de Launch UI : titre en dégradé, maquette dans un
- * cadre translucide, lueur qui déborde par le bas, et fondu du bord inférieur
+ * Reprend la composition de Launch UI : titre en dégradé, maquettes dans leurs
+ * cadres translucides, lueur qui déborde par le bas, et fondu du bord inférieur
  * pour que la section se fonde dans la suivante.
  *
- * La maquette n'est pas une image : c'est la vraie carte produit, en HTML. Elle
- * reste nette sur tous les écrans, pèse quelques octets, et ne pourra jamais
- * montrer une interface que le produit n'a plus.
+ * Les deux écrans montrent les deux faces du produit : le vendeur qui suit ses
+ * commandes, le client qui achète. C'est ce que Watshop fait, dit en une image.
  */
 export function Hero({ connecte }: { connecte: boolean }) {
   return (
@@ -74,32 +72,8 @@ export function Hero({ connecte }: { connecte: boolean }) {
           </ul>
         </div>
 
-        <div className="relative w-full">
-          <MockupFrame
-            size="small"
-            className="animate-appear-zoom mx-auto opacity-0 [animation-delay:600ms]"
-          >
-            <Mockup type="mobile" className="flex-col bg-background p-4">
-              <div className="flex items-center gap-2 pb-3">
-                <span className="size-8 rounded-lg bg-brand" />
-                <span className="text-sm font-semibold">Fatima Fashion</span>
-              </div>
-
-              <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-linear-to-br from-brand/15 to-brand/5">
-                <span className="text-6xl">👗</span>
-              </div>
-
-              <div className="flex items-center justify-between pt-4">
-                <div className="text-left">
-                  <p className="text-sm font-medium">Robe wax</p>
-                  <p className="text-lg font-semibold">{formatMoney(350_000)}</p>
-                </div>
-                <span className="flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">
-                  Commander
-                </span>
-              </div>
-            </Mockup>
-          </MockupFrame>
+        <div className="relative w-full pb-12 sm:pb-20">
+          <HeroShowcase />
 
           <Glow
             variant="below"
