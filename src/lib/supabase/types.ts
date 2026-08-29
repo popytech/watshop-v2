@@ -11,7 +11,7 @@
 
 export type UserRole = "user" | "agent" | "delivery" | "reseller" | "admin";
 export type VehicleType = "moto" | "velo" | "voiture" | "a_pied";
-export type SubscriptionPlan = "free" | "pro";
+export type SubscriptionPlan = "free" | "pro" | "business";
 export type OrderSource = "storefront" | "whatsapp" | "manual";
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
 export type AffiliateStatus = "pending" | "confirmed" | "paid";

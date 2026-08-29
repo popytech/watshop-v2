@@ -19,7 +19,7 @@ create extension if not exists "pgcrypto";
 -- le revendeur pousse des produits et touche à la vente.
 create type user_role as enum ('user', 'agent', 'delivery', 'reseller', 'admin');
 create type vehicle_type as enum ('moto', 'velo', 'voiture', 'a_pied');
-create type subscription_plan as enum ('free', 'pro');
+create type subscription_plan as enum ('free', 'pro', 'business');
 create type order_status as enum ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled');
 -- Provenance d'une commande : le tableau de bord vendeur affiche "commandes" et
 -- "commandes WhatsApp" comme deux chiffres distincts.

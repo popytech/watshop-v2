@@ -46,6 +46,45 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Couleurs de mise en avant de la page d'accueil : les lueurs et dégradés
+     s'en servent. Distinctes de --primary, qui reste la couleur d'action de
+     l'application — et que chaque boutique publique redéfinit. */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+
+  /* Animations d'apparition, purement CSS : aucune librairie JavaScript de
+     motion. Sur un Android en 3G, c'est la différence entre une page qui
+     s'affiche et une page qu'on n'attend pas. */
+  --animate-appear: appear 0.6s forwards ease-out;
+  --animate-appear-zoom: appear-zoom 0.6s forwards ease-out;
+
+  @keyframes appear {
+    0% {
+      opacity: 0;
+      transform: translateY(1rem);
+      filter: blur(0.5rem);
+    }
+    50% {
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes appear-zoom {
+    0% {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 }
 
 :root {
@@ -81,6 +120,8 @@
   --sidebar-accent-foreground: #0d6e3a;
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: #128c4a;
+  --brand: #128c4a;
+  --brand-foreground: #25d366;
 }
 
 .dark {
@@ -115,6 +156,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --brand: #25d366;
+  --brand-foreground: #6ee7a8;
 }
 
 @layer base {
@@ -126,5 +169,15 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
