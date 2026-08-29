@@ -1,4 +1,4 @@
-import { BadgeCheck, Crown, Store, Wallet } from "lucide-react";
+import { BadgeCheck, Clock, Crown, Store, Wallet } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,6 +31,7 @@ export default async function AgentPage() {
 
   const stats = computeAgentStats(sellers, payouts, profile.agent_commission);
   const lienParrainage = `${siteUrl}/register?agent=${profile.agent_code ?? ""}`;
+  const valide = Boolean(profile.agent_verified_at);
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,18 +59,38 @@ export default async function AgentPage() {
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Votre lien de parrainage</CardTitle>
-          <CardDescription>
-            Tout vendeur qui crée son compte par ce lien vous est rattaché automatiquement, dès
-            l&apos;inscription.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SharePanel shopName="Watshop" url={lienParrainage} />
-        </CardContent>
-      </Card>
+      {/* Tant que le compte n'est pas validé, le lien n'est pas affiché : le
+          partager servirait à rien, le trigger d'inscription ignore le code
+          d'un agent non validé. Autant le dire franchement plutôt que de
+          laisser croire à un parrainage qui ne compte pas. */}
+      {valide ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Votre lien de parrainage</CardTitle>
+            <CardDescription>
+              Tout vendeur qui crée son compte par ce lien vous est rattaché automatiquement, dès
+              l&apos;inscription.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SharePanel shopName="Watshop" url={lienParrainage} />
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="size-4 text-muted-foreground" />
+              Compte en attente de validation
+            </CardTitle>
+            <CardDescription>
+              L&apos;équipe Watshop doit valider votre compte avant que vous puissiez recruter.
+              Votre lien de parrainage sera actif dès la validation — d&apos;ici là, un vendeur
+              qui l&apos;utiliserait ne vous serait pas rattaché.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Vendeurs recrutés</h2>

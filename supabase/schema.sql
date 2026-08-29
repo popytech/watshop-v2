@@ -48,6 +48,10 @@ create table public.profiles (
   agent_code text unique,
   agent_commission integer not null default 10000,
   agent_id uuid references public.profiles (id) on delete set null, -- l'agent qui a recruté ce vendeur
+  -- Null = agent non validé : son code de parrainage ne rattache aucun vendeur.
+  -- Le rôle se choisit à l'inscription, il faut donc un accord explicite avant
+  -- qu'un compte puisse se rattacher des vendeurs.
+  agent_verified_at timestamptz,
   -- Programme d'affiliation produit (distinct du programme Agents)
   affiliate_code text unique,
   created_at timestamptz not null default now()
@@ -537,7 +541,9 @@ begin
      or new.is_pro is distinct from old.is_pro
      or new.agent_code is distinct from old.agent_code
      or new.agent_commission is distinct from old.agent_commission
-     or new.agent_id is distinct from old.agent_id then
+     or new.agent_id is distinct from old.agent_id
+     or new.agent_verified_at is distinct from old.agent_verified_at
+     or new.affiliate_code is distinct from old.affiliate_code then
     raise exception 'Champ réservé aux administrateurs';
   end if;
 
@@ -570,7 +576,11 @@ begin
   if v_code is not null then
     select id into v_agent_id
     from public.profiles
-    where agent_code = upper(v_code) and role = 'agent';
+    where agent_code = upper(v_code)
+      and role = 'agent'
+      -- Un agent en attente de validation ne se rattache personne : le lien
+      -- fonctionne, l'inscription aboutit, mais le parrainage n'est pas compté.
+      and agent_verified_at is not null;
   end if;
 
   -- Liste blanche : le rôle vient du formulaire d'inscription, donc du client.

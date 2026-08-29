@@ -7,7 +7,8 @@ attend GNAKRYPAY.
 
 ## 1. Réglages
 
-**Migration** : `supabase/migrations/0004_phase4_reseau_paiements.sql`
+**Migrations**, dans l'ordre : `0004_phase4_reseau_paiements.sql`,
+`0005_role_a_inscription.sql`, puis `0006_validation_agents.sql`
 (base neuve → `supabase/schema.sql` contient déjà tout).
 
 **Variable** : `WATSHOP_MOBILE_MONEY_NUMBER` — le numéro vers lequel les vendeurs
@@ -33,13 +34,28 @@ Les codes (`AG…` pour l'agent, `RV…` pour le revendeur) sont attribués par 
 trigger dès le passage au rôle. Ils sont dérivés de l'identifiant : stables, et
 sans tirage aléatoire à réessayer en cas de collision.
 
-### Un point à trancher côté métier
+### Les agents sont validés avant de pouvoir recruter
 
-Un compte peut se déclarer **agent** tout seul, donc générer un code de
-parrainage et recruter. Le garde-fou financier existe déjà en aval — les
-versements passent par `agent_commission_payouts`, créés par un administrateur,
-jamais automatiquement. Rien n'est donc payé sans validation humaine. Si tu
-préfères filtrer en amont, il faudra un écran de validation des agents.
+N'importe quel compte peut demander le rôle agent à l'inscription. Il ne recrute
+personne pour autant : tant que `profiles.agent_verified_at` est null, **le
+trigger d'inscription ignore son code de parrainage**. Le lien fonctionne,
+l'inscription du vendeur aboutit — le rattachement, lui, n'a pas lieu.
+
+L'agent le voit dans son espace : au lieu de son lien, un encart « compte en
+attente de validation ». Autant le dire franchement que de le laisser partager
+un lien qui ne compte pas.
+
+La validation se fait depuis **`/admin/agents`**, qui montre pour chaque agent
+son code, sa date d'inscription et le nombre de vendeurs déjà rattachés. Retirer
+la validation arrête les futurs rattachements **sans défaire ceux déjà acquis** :
+les vendeurs restent rattachés et les commissions dues le restent aussi.
+
+> Un agent ne peut pas se valider lui-même : `agent_verified_at` figure dans le
+> trigger anti-escalade, au même titre que `role` et `agent_commission`. Sans ça,
+> `profiles_self_update` lui suffirait à se valider d'un appel à l'API.
+
+Le versement reste par ailleurs sous contrôle humain : les payouts sont créés par
+un administrateur, jamais automatiquement.
 
 ---
 
@@ -155,3 +171,10 @@ gonfler ses propres chiffres depuis son compte.
    l'ouvrir en navigation privée, commander → la commission apparaît en attente.
 8. Tenter de s'inscrire en forçant `role=admin` dans la requête → le compte est
    créé en `user`.
+9. Créer un compte « Agent » → son espace affiche « en attente de validation »,
+   sans lien de parrainage. Utiliser quand même son code à l'inscription d'un
+   vendeur → celui-ci n'est pas rattaché.
+10. Le valider depuis `/admin/agents` → le lien apparaît, et un nouveau vendeur
+    inscrit par ce lien est bien rattaché.
+11. Depuis le compte agent, tenter de poser `agent_verified_at` via l'API → le
+    trigger refuse.

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { verifySession } from "@/lib/dal";
+import { requireRole, verifySession } from "@/lib/dal";
 import { requireShop } from "@/lib/shop/queries";
 import type { FormState } from "@/lib/shop/state";
 import {
@@ -17,6 +17,36 @@ import {
 // Écritures des écrans livraison. Toutes passent par le client de
 // l'utilisateur : la RLS refuse une zone ou un livreur rattaché à une boutique
 // qui n'est pas la sienne, même si l'identifiant était falsifié.
+
+// ============================================================
+// Validation des agents (admin)
+// ============================================================
+
+/**
+ * Le rôle agent se choisit à l'inscription : n'importe quel compte peut le
+ * demander. Tant qu'il n'est pas validé, son code ne rattache aucun vendeur —
+ * c'est le trigger d'inscription qui l'ignore, pas l'application.
+ *
+ * Retirer la validation arrête les futurs rattachements sans défaire ceux déjà
+ * acquis : les vendeurs restent rattachés, et les commissions déjà dues aussi.
+ */
+export async function reviewAgent(formData: FormData): Promise<void> {
+  const agentId = String(formData.get("agentId") ?? "");
+  const decision = formData.get("decision");
+  if (decision !== "approve" && decision !== "revoke") return;
+
+  await requireRole("admin");
+  const supabase = await createClient();
+
+  await supabase
+    .from("profiles")
+    .update({ agent_verified_at: decision === "approve" ? new Date().toISOString() : null })
+    .eq("id", agentId)
+    .eq("role", "agent");
+
+  revalidatePath("/admin/agents");
+  revalidatePath("/agent");
+}
 
 // ============================================================
 // Zones de livraison (vendeur)

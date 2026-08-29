@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Store, Package, ShoppingCart, Users, Wallet } from "lucide-react";
+import { Store, Package, ShoppingCart, Users, Wallet, BadgeCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -61,16 +61,23 @@ export default async function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Paiements à vérifier</CardTitle>
+          <CardTitle className="text-base">À vérifier</CardTitle>
           <CardDescription>
-            Les déclarations de virement Mobile Money des vendeurs qui passent en Pro.
+            Les déclarations de virement Mobile Money des vendeurs qui passent en Pro, et les
+            comptes qui demandent le rôle d&apos;agent commercial.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="lg" className="h-11">
             <Link href="/admin/paiements">
               <Wallet />
               Ouvrir les paiements
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-11">
+            <Link href="/admin/agents">
+              <BadgeCheck />
+              Valider les agents
             </Link>
           </Button>
         </CardContent>

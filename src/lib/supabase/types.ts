@@ -31,6 +31,7 @@ type Profile = {
   agent_code: string | null;
   agent_commission: number;
   agent_id: string | null;
+  agent_verified_at: string | null;
   affiliate_code: string | null;
   created_at: string;
 }
