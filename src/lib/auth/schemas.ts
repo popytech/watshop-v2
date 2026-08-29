@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { COUNTRIES, DEFAULT_COUNTRY_CODE, toE164 } from "@/lib/phone";
+import { OTP_LENGTH } from "@/lib/auth/state";
 
 // Toute entrée utilisateur passe par zod avant d'atteindre Supabase.
 // (L'audit du legacy relevait zod installé et utilisé dans 0 des 46 routes.)
@@ -63,7 +64,7 @@ export const verifyOtpSchema = z.object({
   token: z
     .string()
     .trim()
-    .regex(/^\d{6}$/, "Le code contient 6 chiffres."),
+    .regex(new RegExp(`^\\d{${OTP_LENGTH}}$`), `Le code contient ${OTP_LENGTH} chiffres.`),
 });
 
 /** Erreurs zod regroupées par champ, prêtes pour <FieldError>. */

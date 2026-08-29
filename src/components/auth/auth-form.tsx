@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requestOtp, verifyOtp } from "@/lib/auth/actions";
-import { initialAuthState } from "@/lib/auth/state";
+import { initialAuthState, OTP_LENGTH } from "@/lib/auth/state";
 import type { Channel } from "@/lib/auth/schemas";
 import { COUNTRIES, DEFAULT_COUNTRY_CODE, getCountry } from "@/lib/phone";
 
@@ -49,8 +49,8 @@ export function AuthForm({ mode, next }: Props) {
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">
             {requestState.channel === "whatsapp"
-              ? "Nous avons envoyé un code à 6 chiffres sur WhatsApp au"
-              : "Nous avons envoyé un code à 6 chiffres à"}
+              ? `Nous avons envoyé un code à ${OTP_LENGTH} chiffres sur WhatsApp au`
+              : `Nous avons envoyé un code à ${OTP_LENGTH} chiffres à`}
           </p>
           <p className="font-medium">{requestState.label}</p>
         </div>
@@ -68,14 +68,14 @@ export function AuthForm({ mode, next }: Props) {
             <InputOTP
               id="token"
               name="token"
-              maxLength={6}
+              maxLength={OTP_LENGTH}
               autoFocus
               inputMode="numeric"
               autoComplete="one-time-code"
               containerClassName="justify-between sm:justify-start sm:gap-2"
             >
               <InputOTPGroup className="gap-2">
-                {[0, 1, 2, 3, 4, 5].map((index) => (
+                {Array.from({ length: OTP_LENGTH }, (_, index) => index).map((index) => (
                   <InputOTPSlot
                     key={index}
                     index={index}
