@@ -44,3 +44,6 @@ next-env.d.ts
 
 # QR de connexion Fonnte, regenere a la demande par scripts/fonnte-qr.mjs
 fonnte-qr.png
+
+# Variables pretes a coller dans Vercel — contient des secrets
+vercel-env.txt
