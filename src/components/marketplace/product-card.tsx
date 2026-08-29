@@ -80,15 +80,17 @@ export function MarketplaceProductCard({
           ) : null}
         </div>
 
-        <div className="space-y-0.5">
+        {/* Texte centré sous le visuel, comme chez YNS : la grille se lit comme
+            une vitrine, pas comme un tableau. */}
+        <div className="space-y-1 text-center">
           <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
 
-          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
             <Store className="size-3 shrink-0" />
             <span className="truncate">{product.shops.name}</span>
           </p>
 
-          <p className="pt-0.5 text-sm">
+          <p className="text-sm">
             <span className="font-semibold">{formatMoney(prix, devise)}</span>
             {enPromo ? (
               <span className="ml-1.5 text-muted-foreground line-through">

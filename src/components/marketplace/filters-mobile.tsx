@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/sheet";
 
 /**
- * Les mêmes filtres, dans un panneau coulissant sous `lg` — où la colonne de
- * gauche mangerait la moitié de l'écran.
+ * Les filtres, dans un panneau coulissant. Une colonne latérale prenait un quart
+ * de la largeur pour deux filtres, au détriment des visuels — qui sont ce qui
+ * fait vendre.
  *
  * Seule l'enveloppe est un composant client : les filtres eux-mêmes sont rendus
  * côté serveur et passés en `children`. Leurs liens fonctionnent donc même si le
@@ -32,7 +33,7 @@ export function FiltersMobile({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" className="h-10 lg:hidden">
+        <Button variant="outline" className="h-10">
           <SlidersHorizontal />
           Filtres
           {actifs > 0 ? (

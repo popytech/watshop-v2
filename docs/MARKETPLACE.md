@@ -23,11 +23,18 @@ page `/products` :
 
 | Élément | Fichier chez eux | Chez nous |
 |---|---|---|
-| Filtres en colonne à gauche, panneau coulissant sur téléphone | `components/sections/product-filters.tsx` | `marketplace/filters.tsx` + `filters-mobile.tsx` |
+| Grille pleine largeur en trois colonnes, texte centré sous le visuel | leur démo hébergée | les pages `/produits` et `/boutiques` |
+| Carte sans bordure, visuel carré arrondi sur fond `secondary` | `components/product-card.tsx` | `marketplace/product-card.tsx` |
+| Tri en haut à droite, filtres derrière un bouton | leur démo hébergée | `marketplace/sort.tsx` + `filters-mobile.tsx` |
+| Filtres dans un panneau coulissant | `components/sections/product-filters.tsx` | `marketplace/filters.tsx` + `filters-mobile.tsx` |
 | Pagination numérotée avec ellipse | `components/listing-pagination.tsx` | `marketplace/listing-pagination.tsx` |
-| Carte sans bordure, visuel carré arrondi, texte dessous | `components/product-card.tsx` | `marketplace/product-card.tsx` |
 | Squelette aux proportions de la carte | `components/product-grid-skeleton.tsx` | `marketplace/product-grid-skeleton.tsx` |
-| Tri en liens qui remettent à la page 1 | `app/products/products-sort-select.tsx` | `marketplace/sort.tsx` |
+
+> Attention en lisant leur dépôt : leur page `/products` met les filtres dans une
+> colonne à gauche, alors que leur démo hébergée présente une grille pleine
+> largeur avec le tri en haut à droite. C'est cette seconde disposition qui a
+> été retenue — la colonne prenait un quart de la largeur pour deux filtres, au
+> détriment des visuels, qui sont ce qui fait vendre.
 
 Trois écarts assumés :
 
@@ -36,6 +43,8 @@ Trois écarts assumés :
   que le JavaScript ait fini de charger. Sur un Android d'entrée de gamme en 3G,
   ce n'est pas un détail. Seul le panneau coulissant est un composant client —
   les filtres qu'il contient sont rendus côté serveur et passés en `children`.
+  Le sélecteur de tri s'envoie tout seul au changement quand le JavaScript est
+  là, et affiche un bouton « Trier » dans un `<noscript>` quand il ne l'est pas.
 - **Deux filtres au lieu de six.** Leurs facettes (marques, collections,
   fourchette de prix, déclinaisons) n'ont pas d'équivalent en base. En afficher
   qui ne filtreraient rien serait pire que de ne pas les afficher.

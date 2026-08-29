@@ -7,7 +7,7 @@ import { FiltersMobile } from "@/components/marketplace/filters-mobile";
 import { ListingPagination } from "@/components/marketplace/listing-pagination";
 import { MarketplaceProductCard } from "@/components/marketplace/product-card";
 import { ProductGridSkeleton } from "@/components/marketplace/product-grid-skeleton";
-import { SortLinks } from "@/components/marketplace/sort";
+import { SortSelect } from "@/components/marketplace/sort";
 import { formatNumber } from "@/lib/format";
 import { countProducts, listProducts } from "@/lib/marketplace/queries";
 import { nombreDePages, parseParams, type MarketplaceParams } from "@/lib/marketplace/params";
@@ -45,9 +45,9 @@ export async function generateMetadata({
 }
 
 /**
- * La liste est isolée dans son propre composant pour être suspendue : la
- * colonne de filtres et la barre de tri ne dépendent pas de la base et
- * s'affichent tout de suite, la grille arrive derrière avec son squelette.
+ * La liste est isolée pour être suspendue : l'en-tête et la barre d'outils ne
+ * dépendent pas de la base et s'affichent tout de suite, la grille arrive
+ * derrière avec son squelette.
  */
 async function ListeProduits({ params }: { params: MarketplaceParams }) {
   const { items, total } = await listProducts(params);
@@ -67,19 +67,22 @@ async function ListeProduits({ params }: { params: MarketplaceParams }) {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {formatNumber(total)} produit{total > 1 ? "s" : ""}
-        {filtre ? " correspondent à votre recherche" : " en ligne"}
-      </p>
-
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 xl:grid-cols-4">
+    <div className="flex flex-col gap-10">
+      {/* Grille pleine largeur, trois colonnes : les visuels sont ce qui fait
+          vendre, ils ont besoin de place. */}
+      <ul className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((product, index) => (
           <MarketplaceProductCard key={product.id} product={product} priority={index === 0} />
         ))}
       </ul>
 
-      <ListingPagination params={params} total={total} chemin={CHEMIN} />
+      <div className="flex flex-col items-center gap-3">
+        <ListingPagination params={params} total={total} chemin={CHEMIN} />
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {formatNumber(total)} produit{total > 1 ? "s" : ""}
+          {filtre ? " correspondent à votre recherche" : " en ligne"}
+        </p>
+      </div>
     </div>
   );
 }
@@ -99,7 +102,7 @@ export default async function ProduitsPage({
   if (params.page > 1 && params.page > nombreDePages(await countProducts(params))) notFound();
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <div className="mb-8 flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Tous les produits</h1>
         <p className="text-muted-foreground">
@@ -108,26 +111,20 @@ export default async function ProduitsPage({
         </p>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
-        {/* Colonne de filtres, à partir de lg seulement. */}
-        <aside className="hidden lg:block">
+      {/* Barre d'outils : filtres à gauche, tri à droite. Pas de colonne
+          latérale — elle prenait un quart de la largeur pour deux filtres, au
+          détriment des visuels. */}
+      <div className="mb-8 flex items-center justify-between gap-3">
+        <FiltersMobile actifs={actifs}>
           <FilterControls params={params} chemin={CHEMIN} />
-        </aside>
+        </FiltersMobile>
 
-        <div>
-          <div className="mb-8 flex items-center justify-between gap-3">
-            <FiltersMobile actifs={actifs}>
-              <FilterControls params={params} chemin={CHEMIN} />
-            </FiltersMobile>
-
-            <SortLinks params={params} chemin={CHEMIN} />
-          </div>
-
-          <Suspense key={JSON.stringify(params)} fallback={<ProductGridSkeleton />}>
-            <ListeProduits params={params} />
-          </Suspense>
-        </div>
+        <SortSelect params={params} chemin={CHEMIN} />
       </div>
+
+      <Suspense key={JSON.stringify(params)} fallback={<ProductGridSkeleton />}>
+        <ListeProduits params={params} />
+      </Suspense>
     </div>
   );
 }

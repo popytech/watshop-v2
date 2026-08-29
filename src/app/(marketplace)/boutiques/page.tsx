@@ -60,19 +60,20 @@ async function ListeBoutiques({ params }: { params: MarketplaceParams }) {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {formatNumber(total)} boutique{total > 1 ? "s" : ""}
-        {filtre ? " correspondent à votre recherche" : " en ligne"}
-      </p>
-
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+    <div className="flex flex-col gap-10">
+      <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((shop) => (
           <ShopCard key={shop.id} shop={shop} />
         ))}
       </ul>
 
-      <ListingPagination params={params} total={total} chemin={CHEMIN} />
+      <div className="flex flex-col items-center gap-3">
+        <ListingPagination params={params} total={total} chemin={CHEMIN} />
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {formatNumber(total)} boutique{total > 1 ? "s" : ""}
+          {filtre ? " correspondent à votre recherche" : " en ligne"}
+        </p>
+      </div>
     </div>
   );
 }
@@ -92,7 +93,7 @@ export default async function BoutiquesPage({
   if (params.page > 1 && params.page > nombreDePages(await countShops(params))) notFound();
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <div className="mb-8 flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Toutes les boutiques</h1>
         <p className="text-muted-foreground">
@@ -101,25 +102,17 @@ export default async function BoutiquesPage({
         </p>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
-        <aside className="hidden lg:block">
+      {/* Pas de sélecteur de tri ici : une boutique n'a pas de prix, et l'ordre
+          alphabétique n'apprendrait rien à personne. */}
+      <div className="mb-8">
+        <FiltersMobile actifs={actifs}>
           <FilterControls params={params} chemin={CHEMIN} />
-        </aside>
-
-        <div>
-          {/* Pas de tri ici : une boutique n'a pas de prix, et trier par nom
-              n'apporterait rien qu'une liste alphabétique. */}
-          <div className="mb-8 lg:hidden">
-            <FiltersMobile actifs={actifs}>
-              <FilterControls params={params} chemin={CHEMIN} />
-            </FiltersMobile>
-          </div>
-
-          <Suspense key={JSON.stringify(params)} fallback={<ShopGridSkeleton />}>
-            <ListeBoutiques params={params} />
-          </Suspense>
-        </div>
+        </FiltersMobile>
       </div>
+
+      <Suspense key={JSON.stringify(params)} fallback={<ShopGridSkeleton />}>
+        <ListeBoutiques params={params} />
+      </Suspense>
     </div>
   );
 }
