@@ -41,3 +41,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# QR de connexion Fonnte, regenere a la demande par scripts/fonnte-qr.mjs
+fonnte-qr.png
