@@ -70,11 +70,31 @@ maison (table + route serveur). Ça ne toucherait que `requestOtp`/`verifyOtp` d
 `src/lib/auth/actions.ts` et cette route de hook — le reste (rôles, DAL, RLS, écrans) est
 indépendant du canal.
 
-### 2.4 OTP email en 6 chiffres, et Google
+### 2.4 SMTP : port 587, pas 465
 
-- **Authentication → Email Templates → Magic Link** : le gabarit par défaut envoie un lien. Le
-  code attendu par l'écran de connexion est `{{ .Token }}` — ajouter par exemple
-  `Votre code : {{ .Token }}` dans le corps du message.
+Le SMTP par défaut de Supabase n'envoie que quelques emails par heure — intenable
+en recette. Avec Gmail (**Project Settings → Auth → SMTP Settings**) :
+
+```
+Host          smtp.gmail.com
+Port          587          <-- STARTTLS
+Username      watshopafrica@gmail.com
+Password      mot de passe applicatif, sans espaces
+Sender email  watshopafrica@gmail.com
+```
+
+⚠️ **Le port 465 ne fonctionne pas.** Supabase ouvre la connexion en clair puis
+négocie STARTTLS ; le 465 attend un TLS implicite dès la première octet, la
+connexion reste donc ouverte sans réponse. Symptôme : `/auth/v1/otp` répond
+**HTTP 504 « upstream request timeout »** au bout d'une trentaine de secondes, et
+l'écran de connexion affiche un message générique. Vérifié le 2026-08-29.
+
+### 2.5 OTP email en 6 chiffres, et Google
+
+- **Authentication → Emails → Templates** : le gabarit par défaut envoie un lien, alors que
+  l'écran attend un code à 6 chiffres. Ajouter `{{ .Token }}` dans le corps — **des deux
+  gabarits** : *Confirm signup* (utilisé à l'inscription, compte inexistant) et *Magic Link*
+  (utilisé à la connexion). N'en modifier qu'un laisse l'autre parcours envoyer un lien.
 - **Authentication → Providers → Google** : coller le *Client ID* et le *Client Secret* de la
   console Google Cloud, et déclarer côté Google l'URL de redirection
   `https://vgtlbnoiksnpwoxyncxt.supabase.co/auth/v1/callback`.

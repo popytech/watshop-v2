@@ -19,9 +19,27 @@ function readMode(formData: FormData): "login" | "register" {
   return formData.get("mode") === "register" ? "register" : "login";
 }
 
-/** Messages Supabase (anglais, techniques) traduits pour l'utilisateur final. */
+/**
+ * Messages Supabase (anglais, techniques) traduits pour l'utilisateur final.
+ *
+ * L'erreur d'origine est journalisée à part : sans ça, un problème de
+ * configuration côté Supabase (SMTP injoignable, provider désactivé) arrivait
+ * à l'écran sous la forme d'un « réessayez plus tard » indéboguable.
+ */
 function humanizeAuthError(message: string, mode: "login" | "register"): string {
   const normalized = message.toLowerCase();
+
+  // Supabase répond 504 quand son service d'envoi d'email n'aboutit pas :
+  // presque toujours un SMTP personnalisé mal configuré (mauvais port, mot de
+  // passe applicatif refusé), et non un incident passager.
+  if (
+    normalized.includes("timeout") ||
+    normalized.includes("504") ||
+    normalized.includes("error sending") ||
+    normalized.includes("smtp")
+  ) {
+    return "L'envoi du message a expiré. Vérifiez la configuration SMTP du projet Supabase (voir docs/PHASE-1-AUTH.md).";
+  }
 
   if (normalized.includes("signups not allowed")) {
     return mode === "login"
@@ -90,6 +108,7 @@ export async function requestOtp(_prev: AuthState, formData: FormData): Promise<
     });
 
     if (error) {
+      console.error(`[auth] OTP WhatsApp refusé (${error.status ?? "?"}) : ${error.message}`);
       return { step: "identifier", channel, message: humanizeAuthError(error.message, mode) };
     }
 
@@ -109,6 +128,7 @@ export async function requestOtp(_prev: AuthState, formData: FormData): Promise<
   });
 
   if (error) {
+    console.error(`[auth] OTP email refusé (${error.status ?? "?"}) : ${error.message}`);
     return { step: "identifier", channel, message: humanizeAuthError(error.message, mode) };
   }
 
@@ -152,6 +172,7 @@ export async function verifyOtp(_prev: AuthState, formData: FormData): Promise<A
         });
 
   if (error || !data.user) {
+    if (error) console.error(`[auth] vérification refusée (${error.status ?? "?"}) : ${error.message}`);
     return {
       step: "code",
       channel,

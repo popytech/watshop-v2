@@ -55,8 +55,10 @@ copier dans le code** — elles se collent dans le tableau de bord Supabase :
   ajouter `https://vgtlbnoiksnpwoxyncxt.supabase.co/auth/v1/callback` aux URI de
   redirection autorisées côté Google.
 - `GMAIL_APP_PASSWORD` (compte `watshopafrica@gmail.com`) → **Project Settings →
-  Auth → SMTP Settings**. Le SMTP par défaut de Supabase est fortement limité en
-  volume ; avec celui-ci, l'OTP par email tient la charge d'un vrai test.
+  Auth → SMTP Settings**, hôte `smtp.gmail.com`, **port 587** (surtout pas 465 :
+  Supabase négocie STARTTLS, le 465 fait pendre la connexion et l'envoi d'OTP
+  répond 504). Le SMTP par défaut de Supabase est fortement limité en volume ;
+  avec celui-ci, l'OTP par email tient la charge d'un vrai test.
 
 > Ne pas réutiliser les clés Supabase du legacy (`kkujxpyajufayesgqbxy`) : le
 > projet neuf a son propre schéma. Et `ADMIN_SECRET` n'a plus d'équivalent —
