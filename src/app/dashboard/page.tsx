@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Eye, MessageCircle, Plus, ShoppingCart, Wallet } from "lucide-react";
+import { ExternalLink, Eye, MessageCircle, Plus, Share2, ShoppingCart, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +60,34 @@ export default async function DashboardPage({ searchParams }: Props) {
         </h1>
         <p className="text-sm text-muted-foreground">Aujourd&apos;hui</p>
       </div>
+
+      {/* L'adresse de la boutique reste visible en permanence : c'est le lien
+          que le vendeur partage toute la journée, il ne doit pas avoir à le
+          chercher dans les réglages. */}
+      <Card size="sm">
+        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Votre boutique en ligne</p>
+            <p className="truncate font-mono text-sm">
+              {shopUrl.split("://")[1] ?? shopUrl}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button asChild variant="outline" size="sm">
+              <a href={shopUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink />
+                Voir
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/boutique">
+                <Share2 />
+                Partager
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile

@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/fonnte";
 import { toE164 } from "@/lib/phone";
 import { formatMoney } from "@/lib/format";
+import { getSiteUrl } from "@/lib/site-url";
+import { orderReference } from "@/lib/format";
 import { checkoutSchema, fieldErrors, parseCartField } from "@/lib/order/schemas";
 import type { CheckoutState } from "@/lib/order/state";
 
@@ -141,6 +143,7 @@ export async function createOrder(
   }
 
   await notifySeller({
+    siteUrl: await getSiteUrl(),
     shopName: shop.name,
     sellerPhone: shop.whatsapp_number,
     currency: shop.currency_symbol,
@@ -152,6 +155,7 @@ export async function createOrder(
     lines,
     total: subtotal + deliveryFee,
     orderId,
+    source: input.source,
   });
 
   revalidatePath("/dashboard");
@@ -167,6 +171,7 @@ export async function createOrder(
  * conservé.
  */
 async function notifySeller(params: {
+  siteUrl: string;
   shopName: string;
   sellerPhone: string | null;
   currency: string;
@@ -178,6 +183,7 @@ async function notifySeller(params: {
   lines: { product_name: string; unit_price: number; quantity: number; size: string | null }[];
   total: number;
   orderId: string;
+  source: string;
 }): Promise<void> {
   const admin = createAdminClient();
 
@@ -196,8 +202,13 @@ async function notifySeller(params: {
     )
     .join("\n");
 
+  // Le vendeur lit ce message sur son téléphone : le lien direct vers la
+  // commande lui évite de chercher dans son tableau de bord.
+  const lien = `${params.siteUrl}/dashboard/commandes/${params.orderId}`;
+
   const message = [
     `*Nouvelle commande — ${params.shopName}*`,
+    orderReference(params.orderId, params.source),
     "",
     detail,
     "",
@@ -208,6 +219,8 @@ async function notifySeller(params: {
     `Téléphone : ${params.customerPhone}`,
     `Adresse : ${params.address}`,
     params.note ? `Note : ${params.note}` : null,
+    "",
+    `Voir la commande : ${lien}`,
   ]
     .filter((part) => part !== null)
     .join("\n");
