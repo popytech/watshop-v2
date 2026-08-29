@@ -33,16 +33,31 @@ import {
 export async function reviewAgent(formData: FormData): Promise<void> {
   const agentId = String(formData.get("agentId") ?? "");
   const decision = formData.get("decision");
-  if (decision !== "approve" && decision !== "revoke") return;
+  const reason = (formData.get("reason") as string)?.trim() || null;
+  if (decision !== "approve" && decision !== "reject") return;
 
   await requireRole("admin");
   const supabase = await createClient();
+  const approuve = decision === "approve";
+  const maintenant = new Date().toISOString();
 
+  // C'est agent_verified_at qui fait foi : lui seul décide si le code de
+  // parrainage rattache. Le statut du dossier suit, pour que le candidat voie
+  // où il en est et pourquoi.
   await supabase
     .from("profiles")
-    .update({ agent_verified_at: decision === "approve" ? new Date().toISOString() : null })
+    .update({ agent_verified_at: approuve ? maintenant : null })
     .eq("id", agentId)
     .eq("role", "agent");
+
+  await supabase
+    .from("agent_applications")
+    .update({
+      status: approuve ? "approved" : "rejected",
+      rejection_reason: approuve ? null : reason,
+      reviewed_at: maintenant,
+    })
+    .eq("user_id", agentId);
 
   revalidatePath("/admin/agents");
   revalidatePath("/agent");

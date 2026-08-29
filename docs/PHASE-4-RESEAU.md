@@ -8,8 +8,11 @@ attend GNAKRYPAY.
 ## 1. Réglages
 
 **Migrations**, dans l'ordre : `0004_phase4_reseau_paiements.sql`,
-`0005_role_a_inscription.sql`, puis `0006_validation_agents.sql`
-(base neuve → `supabase/schema.sql` contient déjà tout).
+`0005_role_a_inscription.sql`, `0006_validation_agents.sql`, puis
+`0007_dossier_agent.sql` (base neuve → `supabase/schema.sql` contient déjà tout).
+
+Vérifier ensuite dans **Storage** que le bucket `agent-documents` existe et est
+**privé** — contrairement à `shop-media`, qui est public.
 
 **Variable** : `WATSHOP_MOBILE_MONEY_NUMBER` — le numéro vers lequel les vendeurs
 transfèrent pour passer en Pro. Tant qu'il est vide, l'écran d'abonnement le dit
@@ -45,10 +48,27 @@ L'agent le voit dans son espace : au lieu de son lien, un encart « compte en
 attente de validation ». Autant le dire franchement que de le laisser partager
 un lien qui ne compte pas.
 
-La validation se fait depuis **`/admin/agents`**, qui montre pour chaque agent
-son code, sa date d'inscription et le nombre de vendeurs déjà rattachés. Retirer
-la validation arrête les futurs rattachements **sans défaire ceux déjà acquis** :
-les vendeurs restent rattachés et les commissions dues le restent aussi.
+La validation se fait depuis **`/admin/agents`**, sur pièces : chaque candidat
+envoie un dossier depuis son espace — photo, ville et quartier, activité,
+motivation, et sa pièce d'identité s'il le souhaite. L'administrateur voit tout
+ça en face du code et du nombre de vendeurs déjà rattachés, et peut valider ou
+refuser **avec un motif**, que le candidat lit dans son espace avant de
+corriger et renvoyer.
+
+> ⚠️ **Les pièces ne sont pas dans `shop-media`**, qui est public : une photo de
+> carte d'identité accessible par URL serait une fuite de données personnelles.
+> Elles vivent dans un bucket **privé**, `agent-documents`, lisible seulement par
+> son propriétaire et les administrateurs. La base ne stocke pas d'URL mais un
+> chemin ; l'écran d'administration fabrique une URL signée valable cinq
+> minutes. Aucun lien permanent ne circule.
+
+Un candidat renseigne son dossier mais ne s'accorde pas le statut : un trigger
+refuse toute modification de `status`, `rejection_reason` ou `reviewed_at` par
+quelqu'un d'autre qu'un administrateur.
+
+Retirer la validation arrête les futurs rattachements **sans défaire ceux déjà
+acquis** : les vendeurs restent rattachés et les commissions dues le restent
+aussi.
 
 > Un agent ne peut pas se valider lui-même : `agent_verified_at` figure dans le
 > trigger anti-escalade, au même titre que `role` et `agent_commission`. Sans ça,
@@ -178,3 +198,9 @@ gonfler ses propres chiffres depuis son compte.
     inscrit par ce lien est bien rattaché.
 11. Depuis le compte agent, tenter de poser `agent_verified_at` via l'API → le
     trigger refuse.
+12. Créer un compte agent, envoyer un dossier avec photo → l'espace passe en
+    « dossier en cours d'examen », le formulaire disparaît.
+13. Depuis `/admin/agents`, refuser avec un motif → le candidat le voit et peut
+    renvoyer son dossier corrigé.
+14. Copier l'URL signée d'une pièce, attendre cinq minutes, la rouvrir → elle
+    ne fonctionne plus.

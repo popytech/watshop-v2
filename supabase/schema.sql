@@ -34,6 +34,7 @@ create type payout_status as enum ('pending', 'paid');
 -- arrivent, seule l'implémentation soit à écrire — pas le schéma.
 create type payment_provider as enum ('manual', 'gnakrypay');
 create type payment_status as enum ('pending', 'confirmed', 'rejected');
+create type agent_application_status as enum ('pending', 'approved', 'rejected');
 
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -326,6 +327,26 @@ create table public.agent_commission_payouts (
 
 create index agent_commission_payouts_agent_id_idx on public.agent_commission_payouts (agent_id);
 
+-- Dossier de candidature d'un agent : valider quelqu'un sur son seul nom n'a pas
+-- de sens. Un dossier par compte — re-candidater met à jour le même, avec
+-- l'historique du refus précédent sous les yeux.
+create table public.agent_applications (
+  user_id uuid primary key references public.profiles (id) on delete cascade,
+  photo_url text not null,
+  id_document_url text,
+  city text not null,
+  neighborhood text,
+  occupation text,
+  motivation text,
+  status agent_application_status not null default 'pending',
+  rejection_reason text,
+  submitted_at timestamptz not null default now(),
+  reviewed_at timestamptz
+);
+
+create index agent_applications_status_idx
+  on public.agent_applications (status, submitted_at desc);
+
 -- ============================================================
 -- Notifications push
 -- ============================================================
@@ -362,6 +383,7 @@ alter table public.agent_commission_payouts enable row level security;
 alter table public.push_tokens enable row level security;
 alter table public.shop_visits enable row level security;
 alter table public.payments enable row level security;
+alter table public.agent_applications enable row level security;
 
 -- Lecture publique du catalogue actif (boutique publique, marketplace)
 -- Une boutique n'est publique qu'une fois publiée.
@@ -469,6 +491,13 @@ create policy "order_items_delivery_read" on public.order_items for select
     where o.id = order_items.order_id and d.user_id = auth.uid()
   ));
 
+create policy "agent_applications_self_read" on public.agent_applications for select
+  using (auth.uid() = user_id);
+create policy "agent_applications_self_write" on public.agent_applications for insert
+  with check (auth.uid() = user_id);
+create policy "agent_applications_self_update" on public.agent_applications for update
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 create policy "payments_self_read" on public.payments for select using (auth.uid() = user_id);
 create policy "payments_self_insert" on public.payments for insert with check (auth.uid() = user_id);
 
@@ -508,7 +537,8 @@ begin
     'profiles', 'shops', 'categories', 'products', 'product_images',
     'delivery_zones', 'delivery_partners', 'orders', 'order_items',
     'reviews', 'subscriptions', 'affiliate_referrals', 'affiliate_clicks',
-    'agent_commission_payouts', 'push_tokens', 'shop_visits', 'payments'
+    'agent_commission_payouts', 'push_tokens', 'shop_visits', 'payments',
+    'agent_applications'
   ]
   loop
     execute format(
@@ -621,6 +651,31 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Un candidat renseigne son dossier, il ne s'accorde pas le statut.
+create function public.guard_agent_application_status()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if auth.uid() is null or public.is_admin() then
+    return new;
+  end if;
+
+  if new.status is distinct from old.status
+     or new.rejection_reason is distinct from old.rejection_reason
+     or new.reviewed_at is distinct from old.reviewed_at then
+    raise exception 'Statut réservé aux administrateurs';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger agent_applications_guard_status
+  before update on public.agent_applications
+  for each row execute function public.guard_agent_application_status();
 
 -- ============================================================
 -- Stockage des images (logos, photos produits)
@@ -817,3 +872,48 @@ $$;
 create trigger payments_apply_confirmed
   before update on public.payments
   for each row execute function public.apply_confirmed_payment();
+
+-- ============================================================
+-- Bucket privé des pièces de candidature agent
+-- ============================================================
+
+-- Ces pièces ne vont surtout pas dans shop-media, qui est public : une photo de
+-- carte d'identité accessible par URL serait une fuite de données personnelles.
+-- Lecture par le propriétaire et les administrateurs uniquement, via des URL
+-- signées à durée limitée.
+do $$
+begin
+  insert into storage.buckets (id, name, public)
+  values ('agent-documents', 'agent-documents', false)
+  on conflict (id) do nothing;
+
+  execute $p$
+    create policy "agent_docs_owner_read" on storage.objects for select to authenticated
+      using (
+        bucket_id = 'agent-documents'
+        and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
+      )
+  $p$;
+
+  execute $p$
+    create policy "agent_docs_owner_insert" on storage.objects for insert to authenticated
+      with check (
+        bucket_id = 'agent-documents'
+        and (storage.foldername(name))[1] = auth.uid()::text
+      )
+  $p$;
+
+  execute $p$
+    create policy "agent_docs_owner_update" on storage.objects for update to authenticated
+      using (
+        bucket_id = 'agent-documents'
+        and (storage.foldername(name))[1] = auth.uid()::text
+      )
+  $p$;
+
+exception
+  when duplicate_object then
+    raise notice 'Policies du bucket agent-documents déjà en place.';
+  when insufficient_privilege then
+    raise notice 'Droits insuffisants : créer le bucket PRIVÉ « agent-documents » dans Storage, puis ses policies depuis l''interface.';
+end $$;

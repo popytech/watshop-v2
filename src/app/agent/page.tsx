@@ -1,4 +1,4 @@
-import { BadgeCheck, Clock, Crown, Store, Wallet } from "lucide-react";
+import { BadgeCheck, Clock, Crown, FileText, Store, Wallet, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,6 +16,8 @@ import {
   getAgentPayouts,
   getRecruitedSellers,
 } from "@/lib/network/queries";
+import { AgentApplicationForm } from "@/components/network/agent-application-form";
+import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
 import { formatDate, formatMoney, formatMoneyCompact, formatNumber } from "@/lib/format";
 
@@ -28,6 +30,13 @@ export default async function AgentPage() {
     getAgentPayouts(profile.id),
     getSiteUrl(),
   ]);
+
+  const supabase = await createClient();
+  const { data: dossier } = await supabase
+    .from("agent_applications")
+    .select("*")
+    .eq("user_id", profile.id)
+    .maybeSingle();
 
   const stats = computeAgentStats(sellers, payouts, profile.agent_commission);
   const lienParrainage = `${siteUrl}/register?agent=${profile.agent_code ?? ""}`;
@@ -79,16 +88,59 @@ export default async function AgentPage() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="size-4 text-muted-foreground" />
-              Compte en attente de validation
-            </CardTitle>
-            <CardDescription>
-              L&apos;équipe Watshop doit valider votre compte avant que vous puissiez recruter.
-              Votre lien de parrainage sera actif dès la validation — d&apos;ici là, un vendeur
-              qui l&apos;utiliserait ne vous serait pas rattaché.
-            </CardDescription>
+            {dossier?.status === "rejected" ? (
+              <>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <XCircle className="size-4 text-destructive" />
+                  Dossier refusé
+                </CardTitle>
+                <CardDescription>
+                  {dossier.rejection_reason ??
+                    "L'équipe Watshop n'a pas retenu votre candidature."}{" "}
+                  Vous pouvez corriger et renvoyer votre dossier ci-dessous.
+                </CardDescription>
+              </>
+            ) : dossier ? (
+              <>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Clock className="size-4 text-muted-foreground" />
+                  Dossier en cours d&apos;examen
+                </CardTitle>
+                <CardDescription>
+                  Envoyé le {formatDate(dossier.submitted_at)}. L&apos;équipe Watshop l&apos;examine
+                  sous 48 h. Votre lien de parrainage sera actif dès la validation — d&apos;ici là,
+                  un vendeur qui l&apos;utiliserait ne vous serait pas rattaché.
+                </CardDescription>
+              </>
+            ) : (
+              <>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="size-4 text-muted-foreground" />
+                  Complétez votre dossier
+                </CardTitle>
+                <CardDescription>
+                  Un agent touche une commission sur chaque vendeur qu&apos;il recrute :
+                  l&apos;équipe Watshop a besoin de savoir qui vous êtes avant de valider votre
+                  compte.
+                </CardDescription>
+              </>
+            )}
           </CardHeader>
+
+          {dossier?.status === "pending" ? null : (
+            <CardContent>
+              <AgentApplicationForm
+                hasPhoto={Boolean(dossier?.photo_url)}
+                hasIdDocument={Boolean(dossier?.id_document_url)}
+                defaultValues={{
+                  city: dossier?.city ?? "",
+                  neighborhood: dossier?.neighborhood ?? "",
+                  occupation: dossier?.occupation ?? "",
+                  motivation: dossier?.motivation ?? "",
+                }}
+              />
+            </CardContent>
+          )}
         </Card>
       )}
 
