@@ -77,12 +77,17 @@ begin
       and agent_verified_at is not null;
   end if;
 
-  v_role := case new.raw_user_meta_data ->> 'role'
-    when 'agent' then 'agent'::user_role
-    when 'delivery' then 'delivery'::user_role
-    when 'reseller' then 'reseller'::user_role
-    else 'user'::user_role
-  end;
+  -- Même précaution que dans la migration 0005 : le rôle est choisi en texte
+  -- puis converti, pour le cas où ce fichier serait exécuté dans la même
+  -- transaction que l'ajout de 'reseller' à l'enum.
+  v_role := (
+    case new.raw_user_meta_data ->> 'role'
+      when 'agent' then 'agent'
+      when 'delivery' then 'delivery'
+      when 'reseller' then 'reseller'
+      else 'user'
+    end
+  )::user_role;
 
   insert into public.profiles (id, email, phone, name, avatar_url, agent_id, role)
   values (

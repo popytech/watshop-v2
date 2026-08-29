@@ -9,8 +9,14 @@
 --      accordable par ce chemin
 --   3. code d'affiliation attribué automatiquement, comme le code agent
 
--- ⚠️ Si l'éditeur SQL refuse cette ligne (« ALTER TYPE ... cannot run inside a
--- transaction block »), l'exécuter seule, puis relancer le reste du fichier.
+-- Postgres refuse qu'une valeur d'enum ajoutée dans une transaction soit
+-- utilisée avant que celle-ci soit validée (« unsafe use of new value »). Or
+-- l'éditeur SQL de Supabase exécute tout le fichier dans une seule transaction.
+--
+-- Précaution appliquée partout ci-dessous : là où ce fichier doit comparer un
+-- rôle à 'reseller', il compare role::text plutôt que la valeur d'enum. La
+-- comparaison porte alors sur du texte et n'exige plus que la nouvelle valeur
+-- soit déjà validée. Aucune ligne à exécuter séparément.
 alter type user_role add value if not exists 'reseller';
 
 -- ============================================================
@@ -38,7 +44,7 @@ begin
     new.agent_code := public.build_agent_code(new.id);
   end if;
 
-  if new.role = 'reseller' and new.affiliate_code is null then
+  if new.role::text = 'reseller' and new.affiliate_code is null then
     new.affiliate_code := public.build_affiliate_code(new.id);
   end if;
 
@@ -53,7 +59,7 @@ create trigger profiles_assign_agent_code
 
 update public.profiles
 set affiliate_code = public.build_affiliate_code(id)
-where role = 'reseller' and affiliate_code is null;
+where role::text = 'reseller' and affiliate_code is null;
 
 -- ============================================================
 -- Rôle choisi à l'inscription
@@ -79,12 +85,17 @@ begin
   -- Liste blanche : le rôle vient du formulaire d'inscription, donc du client.
   -- 'admin' n'y figure pas et n'y figurera jamais — sans ce filtre, n'importe
   -- qui obtiendrait les droits d'administration en modifiant une requête.
-  v_role := case new.raw_user_meta_data ->> 'role'
-    when 'agent' then 'agent'::user_role
-    when 'delivery' then 'delivery'::user_role
-    when 'reseller' then 'reseller'::user_role
-    else 'user'::user_role
-  end;
+  -- Le rôle est choisi en texte puis converti : la conversion n'a lieu qu'à
+  -- l'exécution du trigger, donc bien après la validation de la transaction
+  -- qui a ajouté 'reseller' à l'enum.
+  v_role := (
+    case new.raw_user_meta_data ->> 'role'
+      when 'agent' then 'agent'
+      when 'delivery' then 'delivery'
+      when 'reseller' then 'reseller'
+      else 'user'
+    end
+  )::user_role;
 
   insert into public.profiles (id, email, phone, name, avatar_url, agent_id, role)
   values (
