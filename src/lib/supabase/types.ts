@@ -16,6 +16,8 @@ export type OrderSource = "storefront" | "whatsapp" | "manual";
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
 export type AffiliateStatus = "pending" | "confirmed" | "paid";
 export type PayoutStatus = "pending" | "paid";
+export type PaymentProvider = "manual" | "gnakrypay";
+export type PaymentStatus = "pending" | "confirmed" | "rejected";
 
 type Profile = {
   id: string;
@@ -189,6 +191,20 @@ type AgentCommissionPayout = {
   created_at: string;
 }
 
+type Payment = {
+  id: string;
+  user_id: string;
+  subscription_id: string | null;
+  provider: PaymentProvider;
+  amount: number;
+  currency: string;
+  reference: string | null;
+  payer_phone: string | null;
+  status: PaymentStatus;
+  created_at: string;
+  confirmed_at: string | null;
+};
+
 type ShopVisit = {
   id: string;
   shop_id: string;
@@ -234,6 +250,7 @@ export type Database = {
       agent_commission_payouts: TableDef<AgentCommissionPayout>;
       push_tokens: TableDef<PushToken>;
       shop_visits: TableDef<ShopVisit>;
+      payments: TableDef<Payment>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -250,6 +267,8 @@ export type Database = {
       order_source: OrderSource;
       affiliate_status: AffiliateStatus;
       payout_status: PayoutStatus;
+      payment_provider: PaymentProvider;
+      payment_status: PaymentStatus;
     };
     CompositeTypes: Record<string, never>;
   };

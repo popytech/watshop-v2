@@ -13,6 +13,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusBadge } from "@/components/dashboard/order-status";
 import { OrderStatusForm } from "@/components/dashboard/order-status-form";
+import { AssignPartnerForm } from "@/components/dashboard/assign-partner-form";
+import { getShopPartners } from "@/lib/network/queries";
 import { getOrder, requirePublishedShop } from "@/lib/shop/queries";
 import { formatDateTime, formatMoney, orderReference } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
@@ -28,6 +30,8 @@ export default async function OrderPage({ params }: Props) {
   const order = await getOrder(shop.id, id);
 
   if (!order) notFound();
+
+  const partners = (await getShopPartners(shop.id)).filter((p) => p.is_active);
 
   const reference = orderReference(order.id, order.source);
   const items = order.order_items ?? [];
@@ -139,8 +143,17 @@ export default async function OrderPage({ params }: Props) {
             WhatsApp.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-5">
           <OrderStatusForm orderId={order.id} status={order.status} />
+
+          {/* Confier la course met la commande dans l'espace du livreur, qui
+              pourra la marquer expédiée puis livrée — sans jamais accéder au
+              reste de la boutique. */}
+          <AssignPartnerForm
+            orderId={order.id}
+            currentPartnerId={order.delivery_partner_id}
+            partners={partners.map((p) => ({ id: p.id, name: p.name, city: p.city }))}
+          />
         </CardContent>
       </Card>
     </div>

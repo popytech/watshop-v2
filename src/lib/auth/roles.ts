@@ -10,10 +10,12 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Administrateur",
 };
 
+// Chaque rôle a son espace : un agent et un livreur n'ont rien à faire dans le
+// tableau de bord d'un vendeur, et n'y auraient de toute façon aucune boutique.
 export const ROLE_HOME: Record<UserRole, string> = {
   user: "/dashboard",
-  agent: "/dashboard",
-  delivery: "/dashboard",
+  agent: "/agent",
+  delivery: "/livreur",
   admin: "/admin",
 };
 

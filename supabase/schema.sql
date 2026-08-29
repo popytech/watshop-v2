@@ -26,6 +26,11 @@ create type order_status as enum ('pending', 'confirmed', 'shipped', 'delivered'
 create type order_source as enum ('storefront', 'whatsapp', 'manual');
 create type affiliate_status as enum ('pending', 'confirmed', 'paid');
 create type payout_status as enum ('pending', 'paid');
+-- 'manual' = virement Mobile Money déclaré par le vendeur puis confirmé par un
+-- admin. 'gnakrypay' existe dès maintenant pour que le jour où ses accès
+-- arrivent, seule l'implémentation soit à écrire — pas le schéma.
+create type payment_provider as enum ('manual', 'gnakrypay');
+create type payment_status as enum ('pending', 'confirmed', 'rejected');
 
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -250,6 +255,25 @@ create table public.subscriptions (
 
 create index subscriptions_user_id_idx on public.subscriptions (user_id);
 
+create table public.payments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  subscription_id uuid references public.subscriptions (id) on delete set null,
+  provider payment_provider not null default 'manual',
+  amount integer not null check (amount >= 0),
+  currency text not null default 'GNF',
+  -- Référence du transfert Mobile Money, ou identifiant de transaction rendu
+  -- par l'agrégateur.
+  reference text,
+  payer_phone text,
+  status payment_status not null default 'pending',
+  created_at timestamptz not null default now(),
+  confirmed_at timestamptz
+);
+
+create index payments_user_id_idx on public.payments (user_id);
+create index payments_status_idx on public.payments (status, created_at desc);
+
 -- ============================================================
 -- Programme d'affiliation produit
 -- ============================================================
@@ -330,6 +354,7 @@ alter table public.affiliate_clicks enable row level security;
 alter table public.agent_commission_payouts enable row level security;
 alter table public.push_tokens enable row level security;
 alter table public.shop_visits enable row level security;
+alter table public.payments enable row level security;
 
 -- Lecture publique du catalogue actif (boutique publique, marketplace)
 -- Une boutique n'est publique qu'une fois publiée.
@@ -403,6 +428,43 @@ create policy "affiliate_clicks_self_read" on public.affiliate_clicks for select
 create policy "agent_commission_payouts_self_read" on public.agent_commission_payouts for select
   using (auth.uid() = agent_id);
 
+-- Un agent voit strictement les vendeurs qu'il a recrutés. Ce n'est pas un
+-- demi-admin : ni les commandes, ni les clients, ni les autres boutiques.
+create policy "profiles_agent_read" on public.profiles for select
+  using (agent_id = auth.uid());
+create policy "shops_agent_read" on public.shops for select
+  using (exists (
+    select 1 from public.profiles p
+    where p.id = shops.user_id and p.agent_id = auth.uid()
+  ));
+
+-- Un livreur voit les commandes qui lui sont confiées, et peut les avancer.
+create policy "delivery_partners_self_read" on public.delivery_partners for select
+  using (user_id = auth.uid());
+create policy "orders_delivery_read" on public.orders for select
+  using (exists (
+    select 1 from public.delivery_partners d
+    where d.id = orders.delivery_partner_id and d.user_id = auth.uid()
+  ));
+create policy "orders_delivery_update" on public.orders for update
+  using (exists (
+    select 1 from public.delivery_partners d
+    where d.id = orders.delivery_partner_id and d.user_id = auth.uid()
+  ))
+  with check (exists (
+    select 1 from public.delivery_partners d
+    where d.id = orders.delivery_partner_id and d.user_id = auth.uid()
+  ));
+create policy "order_items_delivery_read" on public.order_items for select
+  using (exists (
+    select 1 from public.orders o
+    join public.delivery_partners d on d.id = o.delivery_partner_id
+    where o.id = order_items.order_id and d.user_id = auth.uid()
+  ));
+
+create policy "payments_self_read" on public.payments for select using (auth.uid() = user_id);
+create policy "payments_self_insert" on public.payments for insert with check (auth.uid() = user_id);
+
 create policy "shop_visits_owner_read" on public.shop_visits for select
   using (exists (select 1 from public.shops s where s.id = shop_id and s.user_id = auth.uid()));
 -- Pas de policy d'insertion : les visites sont enregistrées côté serveur depuis
@@ -439,7 +501,7 @@ begin
     'profiles', 'shops', 'categories', 'products', 'product_images',
     'delivery_zones', 'delivery_partners', 'orders', 'order_items',
     'reviews', 'subscriptions', 'affiliate_referrals', 'affiliate_clicks',
-    'agent_commission_payouts', 'push_tokens', 'shop_visits'
+    'agent_commission_payouts', 'push_tokens', 'shop_visits', 'payments'
   ]
   loop
     execute format(
@@ -493,8 +555,21 @@ returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
+declare
+  v_agent_id uuid;
+  v_code text;
 begin
-  insert into public.profiles (id, email, phone, name, avatar_url)
+  -- Le code de parrainage voyage dans les métadonnées d'inscription
+  -- (?agent=AG123456). Le résoudre ici, une fois pour toutes, ferme la porte à
+  -- un vendeur qui réattribuerait son parrain après coup.
+  v_code := nullif(trim(new.raw_user_meta_data ->> 'agent_code'), '');
+  if v_code is not null then
+    select id into v_agent_id
+    from public.profiles
+    where agent_code = upper(v_code) and role = 'agent';
+  end if;
+
+  insert into public.profiles (id, email, phone, name, avatar_url, agent_id)
   values (
     new.id,
     new.email,
@@ -506,7 +581,8 @@ begin
     coalesce(
       new.raw_user_meta_data ->> 'avatar_url',
       new.raw_user_meta_data ->> 'picture'
-    )
+    ),
+    v_agent_id
   )
   on conflict (id) do nothing;
 
@@ -568,3 +644,138 @@ exception
   when insufficient_privilege then
     raise notice 'Droits insuffisants sur storage.objects : créer le bucket public « shop-media » dans Storage, puis ses policies depuis l''interface (voir docs/PHASE-2-DASHBOARD.md). Le reste du schéma est appliqué.';
 end $$;
+
+-- ============================================================
+-- Code agent et garde-fous des rôles (Phase 4)
+-- ============================================================
+
+-- Code lisible et court, dérivé de l'identifiant : pas de tirage aléatoire à
+-- réessayer en cas de collision, et il reste stable pour l'agent.
+create function public.build_agent_code(p_id uuid)
+returns text
+language sql
+immutable
+as $$
+  select 'AG' || upper(substr(replace(p_id::text, '-', ''), 1, 6));
+$$;
+
+-- Attribué dès qu'un profil passe au rôle 'agent' : rien à demander.
+create function public.assign_agent_code()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if new.role = 'agent' and new.agent_code is null then
+    new.agent_code := public.build_agent_code(new.id);
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_assign_agent_code
+  before insert or update of role on public.profiles
+  for each row execute function public.assign_agent_code();
+
+-- Un livreur avance une commande (expédiée, livrée) mais ne peut ni l'annuler,
+-- ni la remettre en attente, ni toucher au montant. La policy UPDATE ne sait
+-- pas comparer NEW et OLD, d'où ce trigger.
+create function public.guard_delivery_order_update()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_est_livreur boolean;
+begin
+  select exists (
+    select 1 from public.delivery_partners d
+    where d.id = new.delivery_partner_id and d.user_id = auth.uid()
+  ) into v_est_livreur;
+
+  if auth.uid() is null or not v_est_livreur or public.is_admin() then
+    return new;
+  end if;
+
+  if exists (
+    select 1 from public.shops s where s.id = new.shop_id and s.user_id = auth.uid()
+  ) then
+    return new;
+  end if;
+
+  if new.status not in ('shipped', 'delivered') then
+    raise exception 'Un livreur ne peut que marquer une commande expédiée ou livrée';
+  end if;
+
+  if new.total_amount is distinct from old.total_amount
+     or new.shop_id is distinct from old.shop_id
+     or new.delivery_partner_id is distinct from old.delivery_partner_id
+     or new.customer_phone is distinct from old.customer_phone then
+    raise exception 'Champ non modifiable par un livreur';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger orders_guard_delivery_update
+  before update on public.orders
+  for each row execute function public.guard_delivery_order_update();
+
+-- ============================================================
+-- Paiements : confirmation réservée, et effet sur l'abonnement
+-- ============================================================
+
+-- Le vendeur déclare son paiement, il ne le confirme pas.
+create function public.guard_payment_status()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if auth.uid() is null or public.is_admin() then
+    return new;
+  end if;
+
+  if new.status is distinct from old.status
+     or new.amount is distinct from old.amount then
+    raise exception 'Seul un administrateur peut confirmer un paiement';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger payments_guard_status
+  before update on public.payments
+  for each row execute function public.guard_payment_status();
+
+-- Un paiement confirmé fait passer l'abonnement en Pro. La règle vit en base :
+-- quel que soit le chemin qui confirme le paiement — écran admin aujourd'hui,
+-- webhook GNAKRYPAY demain — l'abonnement suit.
+create function public.apply_confirmed_payment()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if new.status = 'confirmed' and (old.status is null or old.status <> 'confirmed') then
+    new.confirmed_at := coalesce(new.confirmed_at, now());
+
+    update public.subscriptions
+    set plan = 'pro',
+        is_active = true,
+        payment_reference = new.reference,
+        ends_at = greatest(coalesce(ends_at, now()), now()) + interval '1 month'
+    where user_id = new.user_id;
+
+    update public.profiles set is_pro = true where id = new.user_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger payments_apply_confirmed
+  before update on public.payments
+  for each row execute function public.apply_confirmed_payment();

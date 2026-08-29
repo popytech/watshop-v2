@@ -35,6 +35,14 @@ export const requestOtpSchema = z
     countryCode,
     name: nameSchema.optional(),
     mode: z.enum(["login", "register"]).default("login"),
+    // Code de parrainage d'un agent commercial, transmis par le lien
+    // d'inscription qu'il partage. Résolu en base par le trigger d'inscription.
+    agentCode: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^AG[A-Z0-9]{6}$/, "Code de parrainage invalide.")
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.channel === "whatsapp") {

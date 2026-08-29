@@ -23,9 +23,9 @@ import { COUNTRIES, DEFAULT_COUNTRY_CODE, getCountry } from "@/lib/phone";
 
 import { GoogleButton } from "@/components/auth/google-button";
 
-type Props = { mode: "login" | "register"; next?: string };
+type Props = { mode: "login" | "register"; next?: string; agentCode?: string };
 
-export function AuthForm({ mode, next }: Props) {
+export function AuthForm({ mode, next, agentCode }: Props) {
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [name, setName] = useState("");
@@ -116,6 +116,7 @@ export function AuthForm({ mode, next }: Props) {
             <input type="hidden" name="name" value={name} />
             <input type="hidden" name="phone" value={phone} />
             <input type="hidden" name="email" value={email} />
+            {agentCode ? <input type="hidden" name="agentCode" value={agentCode} /> : null}
             <Button type="submit" variant="link" size="sm" disabled={requestPending}>
               {requestPending ? <Loader2 className="animate-spin" /> : null}
               Renvoyer un code
@@ -143,6 +144,7 @@ export function AuthForm({ mode, next }: Props) {
         <form action={requestAction} className="mt-5">
           <input type="hidden" name="mode" value={mode} />
           <input type="hidden" name="channel" value={channel} />
+          {agentCode ? <input type="hidden" name="agentCode" value={agentCode} /> : null}
 
           <FieldGroup className="gap-4">
             {mode === "register" ? (

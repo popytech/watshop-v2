@@ -1,3 +1,7 @@
+import Link from "next/link";
+import { Crown, Truck } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -36,6 +40,27 @@ export default async function ShopSettingsPage() {
           <SharePanel shopName={shop.name} url={shopUrl} />
         </CardContent>
       </Card>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Button asChild variant="outline" size="lg" className="h-auto justify-start py-3">
+          <Link href="/dashboard/livraison">
+            <Truck />
+            <span className="flex flex-col items-start">
+              <span className="font-medium">Livraison</span>
+              <span className="text-xs text-muted-foreground">Zones et livreurs</span>
+            </span>
+          </Link>
+        </Button>
+        <Button asChild variant="outline" size="lg" className="h-auto justify-start py-3">
+          <Link href="/dashboard/abonnement">
+            <Crown />
+            <span className="flex flex-col items-start">
+              <span className="font-medium">Abonnement</span>
+              <span className="text-xs text-muted-foreground">Formule et paiements</span>
+            </span>
+          </Link>
+        </Button>
+      </div>
 
       <Card>
         <CardHeader>

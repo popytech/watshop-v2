@@ -1,4 +1,7 @@
-import { Store, Package, ShoppingCart, Users } from "lucide-react";
+import Link from "next/link";
+import { Store, Package, ShoppingCart, Users, Wallet } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import {
   Card,
@@ -55,6 +58,23 @@ export default async function AdminPage() {
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Paiements à vérifier</CardTitle>
+          <CardDescription>
+            Les déclarations de virement Mobile Money des vendeurs qui passent en Pro.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" size="lg" className="h-11">
+            <Link href="/admin/paiements">
+              <Wallet />
+              Ouvrir les paiements
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

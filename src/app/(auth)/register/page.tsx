@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-type Props = { searchParams: Promise<{ next?: string }> };
+type Props = { searchParams: Promise<{ next?: string; agent?: string }> };
 
 export const metadata: Metadata = {
   title: "Créer un compte — Watshop",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RegisterPage({ searchParams }: Props) {
-  const { next } = await searchParams;
+  const { next, agent } = await searchParams;
 
   return (
     <Card className="p-2">
@@ -29,7 +29,7 @@ export default async function RegisterPage({ searchParams }: Props) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <AuthForm mode="register" next={next} />
+        <AuthForm mode="register" next={next} agentCode={agent} />
       </CardContent>
     </Card>
   );

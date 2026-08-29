@@ -84,6 +84,7 @@ export async function requestOtp(_prev: AuthState, formData: FormData): Promise<
     email: formData.get("email") ?? undefined,
     countryCode: formData.get("countryCode") ?? undefined,
     name: (formData.get("name") as string)?.trim() || undefined,
+    agentCode: (formData.get("agentCode") as string)?.trim() || undefined,
     mode,
   });
 
@@ -92,13 +93,18 @@ export async function requestOtp(_prev: AuthState, formData: FormData): Promise<
     return { step: "identifier", channel, errors: fieldErrors(parsed.error) };
   }
 
-  const { channel, countryCode, name } = parsed.data;
+  const { channel, countryCode, name, agentCode } = parsed.data;
   const supabase = await createClient();
 
   // En connexion on ne crée pas de compte : un identifiant inconnu doit dire
   // "inscrivez-vous" plutôt que de créer un compte fantôme silencieusement.
   const shouldCreateUser = mode === "register";
-  const metadata = name ? { name, country_code: countryCode } : { country_code: countryCode };
+  // agent_code voyage dans les métadonnées : c'est le trigger d'inscription qui
+  // le résout en base, pas l'application — un vendeur ne peut donc pas se
+  // réattribuer un parrain après coup.
+  const metadata: Record<string, string> = { country_code: countryCode };
+  if (name) metadata.name = name;
+  if (agentCode) metadata.agent_code = agentCode;
 
   if (channel === "whatsapp") {
     const phone = toE164(parsed.data.phone!, countryCode)!;
