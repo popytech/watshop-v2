@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Store, Package, ShoppingCart, Users, Wallet, BadgeCheck } from "lucide-react";
+import { Store, Package, ShoppingCart, Users, Wallet, BadgeCheck, Megaphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -78,6 +78,12 @@ export default async function AdminPage() {
             <Link href="/admin/agents">
               <BadgeCheck />
               Valider les agents
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-11">
+            <Link href="/admin/diffusion">
+              <Megaphone />
+              Diffuser un message
             </Link>
           </Button>
         </CardContent>

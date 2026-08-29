@@ -351,11 +351,16 @@ create index agent_applications_status_idx
 -- Notifications push
 -- ============================================================
 
+-- Abonnements Web Push (VAPID) : pas de compte tiers, mais trois éléments par
+-- abonnement — l'endpoint du navigateur et deux clés de chiffrement.
 create table public.push_tokens (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
-  token text not null unique,
+  token text not null unique, -- endpoint renvoyé par le navigateur
+  p256dh text,
+  auth text,
   platform text not null default 'web',
+  last_used_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

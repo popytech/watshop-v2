@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PushToggle } from "@/components/pwa/push-toggle";
 import { SharePanel } from "@/components/shop/share-panel";
 import { ShopSettingsForm } from "@/components/shop/shop-settings-form";
 import { requirePublishedShop } from "@/lib/shop/queries";
@@ -38,6 +39,19 @@ export default async function ShopSettingsPage() {
         </CardHeader>
         <CardContent>
           <SharePanel shopName={shop.name} url={shopUrl} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Notifications</CardTitle>
+          <CardDescription>
+            Recevez vos commandes directement sur cet appareil, même Watshop fermé. À activer sur
+            chaque téléphone ou ordinateur que vous utilisez.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PushToggle />
         </CardContent>
       </Card>
 

@@ -232,8 +232,12 @@ type ShopVisit = {
 type PushToken = {
   id: string;
   user_id: string;
+  /** Endpoint Web Push renvoyé par le navigateur. */
   token: string;
+  p256dh: string | null;
+  auth: string | null;
   platform: string;
+  last_used_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { signOut } from "@/lib/auth/actions";
 import { roleLabel } from "@/lib/auth/roles";
 import type { Database } from "@/lib/supabase/types";
@@ -41,6 +42,8 @@ export function AppHeader({ profile, home }: { profile: Profile; home: string })
           <span className="hidden max-w-40 truncate text-sm font-medium sm:inline">
             {profile.name ?? profile.email ?? profile.phone}
           </span>
+
+          <ThemeToggle />
 
           {/* La déconnexion est une Server Action : elle invalide la session
               Supabase côté serveur, pas seulement un token en localStorage. */}

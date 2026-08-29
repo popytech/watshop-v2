@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/fonnte";
+import { sendPushToUsers } from "@/lib/push/send";
 import { toE164 } from "@/lib/phone";
 import { formatMoney } from "@/lib/format";
 import { getSiteUrl } from "@/lib/site-url";
@@ -155,6 +156,23 @@ export async function createOrder(
     orderId,
     commissions,
   });
+
+  // La notification arrive même WhatsApp fermé, et sans consommer le quota
+  // Fonnte. Les deux canaux sont complémentaires, pas redondants.
+  const { data: proprietaire } = await admin
+    .from("shops")
+    .select("user_id")
+    .eq("id", shop.id)
+    .maybeSingle();
+
+  if (proprietaire) {
+    await sendPushToUsers([proprietaire.user_id], {
+      title: `Nouvelle commande — ${formatMoney(subtotal + deliveryFee, shop.currency_symbol)}`,
+      body: `${input.customerName} · ${lines.map((l) => l.product_name).join(", ")}`,
+      url: `/dashboard/commandes/${orderId}`,
+      tag: orderId,
+    });
+  }
 
   await notifySeller({
     siteUrl: await getSiteUrl(),
