@@ -82,7 +82,7 @@ export function formatPhone(e164: string): string {
  * n'appartient à aucun d'eux.
  */
 export function getDialCode(e164: string): string | null {
-  const digits = e164.replace(/D/g, "");
+  const digits = toFonnteTarget(e164);
   return COUNTRIES.find((c) => digits.startsWith(c.dial))?.dial ?? null;
 }
 
