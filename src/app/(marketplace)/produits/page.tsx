@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { CategoryTiles, CategoryTilesSkeleton } from "@/components/marketplace/category-tiles";
 import { FilterControls } from "@/components/marketplace/filters";
 import { FiltersMobile } from "@/components/marketplace/filters-mobile";
 import { ListingPagination } from "@/components/marketplace/listing-pagination";
@@ -94,6 +95,7 @@ export default async function ProduitsPage({
 }) {
   const params = parseParams(await searchParams);
   const actifs = [params.q, params.categorie, params.pays].filter(Boolean).length;
+  const sansFiltre = actifs === 0 && params.page === 1;
 
   // Validé avant le rendu, pas dans la liste suspendue : une fois le flux
   // ouvert, le code HTTP est parti, et un notFound() plus tard afficherait la
@@ -125,6 +127,17 @@ export default async function ProduitsPage({
       <Suspense key={JSON.stringify(params)} fallback={<ProductGridSkeleton />}>
         <ListeProduits params={params} />
       </Suspense>
+
+      {/* Sous la grille, et seulement sur la première page sans filtre : une
+          fois qu'on a choisi une catégorie, la liste des catégories n'est plus
+          qu'un encombrement. */}
+      {sansFiltre ? (
+        <div className="mt-16">
+          <Suspense fallback={<CategoryTilesSkeleton />}>
+            <CategoryTiles />
+          </Suspense>
+        </div>
+      ) : null}
     </div>
   );
 }

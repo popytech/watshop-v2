@@ -170,6 +170,67 @@ export function productCount(shop: MarketplaceShop): number {
   return shop.products?.[0]?.count ?? 0;
 }
 
+export type CategoryTile = {
+  /** Libellé exact, tel qu'il est stocké dans `shops.category`. */
+  nom: string;
+  boutiques: number;
+  /** Première photo trouvée dans la catégorie, ou null si personne n'en a mis. */
+  image: { url: string; alt: string } | null;
+};
+
+/**
+ * Tuiles « Parcourir par catégorie ».
+ *
+ * Rien n'est inventé : le visuel de chaque tuile est une vraie photo produit
+ * d'une boutique de la catégorie, et une catégorie sans boutique publiée n'est
+ * pas rendue du tout. Avec une seule boutique en base, il y a donc une tuile et
+ * non huit tuiles vides.
+ *
+ * Deux requêtes plutôt qu'une par catégorie : la première compte, la seconde
+ * ramène de quoi illustrer. La limite de 500 produits suffit largement à
+ * couvrir les huit catégories tant que le catalogue tient dans cet ordre de
+ * grandeur ; au-delà, une vue agrégée en base serait à écrire.
+ */
+export async function getCategoryTiles(): Promise<CategoryTile[]> {
+  const supabase = await createClient();
+
+  const [{ data: boutiques }, { data: produits }] = await Promise.all([
+    supabase.from("shops").select("category"),
+    supabase
+      .from("products")
+      .select("shops!inner(category), product_images(url, alt_text, position)")
+      .order("is_sponsored", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(500),
+  ]);
+
+  const comptes = new Map<string, number>();
+  for (const boutique of boutiques ?? []) {
+    if (!boutique.category) continue;
+    comptes.set(boutique.category, (comptes.get(boutique.category) ?? 0) + 1);
+  }
+
+  const images = new Map<string, { url: string; alt: string }>();
+  for (const produit of (produits ?? []) as unknown as {
+    shops: { category: string | null };
+    product_images: { url: string; alt_text: string; position: number }[];
+  }[]) {
+    const categorie = produit.shops?.category;
+    if (!categorie || images.has(categorie)) continue;
+
+    const photo = [...(produit.product_images ?? [])].sort((a, b) => a.position - b.position)[0];
+    if (photo) images.set(categorie, { url: photo.url, alt: photo.alt_text });
+  }
+
+  return [...comptes.entries()]
+    .map(([nom, boutiquesCount]) => ({
+      nom,
+      boutiques: boutiquesCount,
+      image: images.get(nom) ?? null,
+    }))
+    .sort((a, b) => b.boutiques - a.boutiques || a.nom.localeCompare(b.nom, "fr"));
+}
+
 /*
  * Comptes seuls, sans ramener une ligne.
  *

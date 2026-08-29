@@ -39,6 +39,7 @@ export function MarketplaceProductCard({
   const enPromo = prix < product.price;
   const rupture = product.quantity <= 0;
   const devise = product.shops.currency_symbol;
+  const tailles = (product.sizes ?? []).filter(Boolean);
 
   return (
     <li>
@@ -83,6 +84,28 @@ export function MarketplaceProductCard({
         {/* Texte centré sous le visuel, comme chez YNS : la grille se lit comme
             une vitrine, pas comme un tableau. */}
         <div className="space-y-1 text-center">
+          {/* À la place des pastilles de couleur de YNS, qui reposent sur leurs
+              variantes : nous n'avons pas de couleurs en base, mais des tailles,
+              saisies en texte libre par le vendeur. Trois au plus, pour ne pas
+              qu'une saisie bavarde déséquilibre la grille. */}
+          {tailles.length > 0 ? (
+            <ul className="flex flex-wrap justify-center gap-1">
+              {tailles.slice(0, 3).map((taille) => (
+                <li
+                  key={taille}
+                  className="rounded border px-1.5 py-0.5 text-[0.65rem] leading-none text-muted-foreground"
+                >
+                  {taille}
+                </li>
+              ))}
+              {tailles.length > 3 ? (
+                <li className="px-1 text-[0.65rem] leading-none text-muted-foreground">
+                  +{tailles.length - 3}
+                </li>
+              ) : null}
+            </ul>
+          ) : null}
+
           <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
 
           <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
