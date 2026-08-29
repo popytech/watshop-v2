@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { otpMessage, sendWhatsAppMessage } from "@/lib/fonnte";
-import { toFonnteTarget } from "@/lib/phone";
 
 // "Send SMS Hook" de Supabase Auth.
 //
@@ -95,7 +94,7 @@ export async function POST(request: Request) {
     return hookError(400, "Numéro ou code manquant");
   }
 
-  const result = await sendWhatsAppMessage(toFonnteTarget(phone), otpMessage(otp));
+  const result = await sendWhatsAppMessage(phone, otpMessage(otp));
   if (!result.ok) {
     console.error(`[send-sms] échec Fonnte : ${result.reason}`);
     // 500 : Supabase renverra une erreur au client, qui pourra réessayer.

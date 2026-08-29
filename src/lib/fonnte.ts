@@ -1,4 +1,5 @@
 import "server-only";
+import { getDialCode, toFonnteTarget } from "@/lib/phone";
 
 // Passerelle WhatsApp Fonnte.
 //
@@ -11,18 +12,30 @@ const FONNTE_ENDPOINT = "https://api.fonnte.com/send";
 
 export type SendResult = { ok: true } | { ok: false; reason: string };
 
+/**
+ * @param phone numéro au format E.164 (le "+" est optionnel)
+ *
+ * Le paramètre countryCode n'est pas décoratif : sans lui, Fonnte considère le
+ * numéro comme indonésien et lui préfixe 62. Un +224 612 960 453 partait donc
+ * vers 62224612960453, un numéro qui n'existe pas — la requête répondait
+ * "success", et le message n'arrivait jamais.
+ */
 export async function sendWhatsAppMessage(
-  target: string,
+  phone: string,
   message: string,
 ): Promise<SendResult> {
   const token = process.env.FONNTE_TOKEN;
   if (!token) return { ok: false, reason: "FONNTE_TOKEN absent" };
 
+  const target = toFonnteTarget(phone);
+  const countryCode = getDialCode(phone);
+  if (!countryCode) return { ok: false, reason: `indicatif inconnu pour ${phone}` };
+
   try {
     const response = await fetch(FONNTE_ENDPOINT, {
       method: "POST",
       headers: { Authorization: token, "Content-Type": "application/json" },
-      body: JSON.stringify({ target, message }),
+      body: JSON.stringify({ target, message, countryCode }),
       signal: AbortSignal.timeout(10_000),
     });
 

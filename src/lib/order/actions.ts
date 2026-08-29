@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/fonnte";
-import { toE164, toFonnteTarget } from "@/lib/phone";
+import { toE164 } from "@/lib/phone";
 import { formatMoney } from "@/lib/format";
 import { checkoutSchema, fieldErrors, parseCartField } from "@/lib/order/schemas";
 import type { CheckoutState } from "@/lib/order/state";
@@ -212,7 +212,7 @@ async function notifySeller(params: {
     .filter((part) => part !== null)
     .join("\n");
 
-  const result = await sendWhatsAppMessage(toFonnteTarget(params.sellerPhone), message);
+  const result = await sendWhatsAppMessage(params.sellerPhone, message);
 
   if (!result.ok) {
     // La raison exacte n'est pas stockée en base (la colonne sert d'indicateur

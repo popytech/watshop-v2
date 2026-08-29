@@ -77,6 +77,15 @@ export function formatPhone(e164: string): string {
   return `+${country.dial} ${groups.join(" ")}`;
 }
 
+/**
+ * Indicatif pays d'un numéro E.164, parmi les pays couverts. Null si le numéro
+ * n'appartient à aucun d'eux.
+ */
+export function getDialCode(e164: string): string | null {
+  const digits = e164.replace(/D/g, "");
+  return COUNTRIES.find((c) => digits.startsWith(c.dial))?.dial ?? null;
+}
+
 /** Fonnte attend le numéro sans le "+". */
 export function toFonnteTarget(e164: string): string {
   return e164.replace(/\D/g, "");
