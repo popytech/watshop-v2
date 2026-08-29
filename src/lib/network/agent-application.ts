@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
-import { requireRole, verifySession } from "@/lib/dal";
+import { requireRole } from "@/lib/dal";
 import { uploadAgentDocument } from "@/lib/storage";
 import { fieldErrors } from "@/lib/network/schemas";
 import type { FormState } from "@/lib/shop/state";

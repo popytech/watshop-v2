@@ -50,18 +50,7 @@
   @apply border-dashed;
 }
 
-/* Défilement horizontal continu des boutiques. La liste est dupliquée dans le
-   HTML et l'animation translate de la moitié : la boucle est donc invisible.
-   Mise en pause au survol pour qu'on puisse lire un nom. */
-@utility marquee-track {
-  animation: marquee 40s linear infinite;
-}
-
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
+/* Le défilement des boutiques était fait ici à la main. Il l'est désormais par
+   le composant Marquee de Magic UI, qui apporte ses propres @keyframes dans
+   globals.css. En garder une seconde définition du même nom ici les mettrait en
+   concurrence. */

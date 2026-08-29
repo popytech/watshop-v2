@@ -1,5 +1,6 @@
-import { Section, SectionHeader } from "@/components/landing/section";
 import { Beam } from "@/components/landing/beam";
+import { Section, SectionHeader } from "@/components/landing/section";
+import { Marquee } from "@/components/ui/marquee";
 import { formatMoney } from "@/lib/format";
 
 // Boutiques et montants fournis par Watshop, pas calculés depuis la base : d'où
@@ -15,7 +16,7 @@ const BOUTIQUES = [
 
 function Carte({ boutique }: { boutique: (typeof BOUTIQUES)[number] }) {
   return (
-    <li className="glass-4 flex w-72 shrink-0 items-center gap-4 rounded-xl p-4">
+    <div className="glass-4 flex w-72 shrink-0 items-center gap-4 rounded-xl p-4">
       <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted text-2xl">
         {boutique.emoji}
       </span>
@@ -24,7 +25,7 @@ function Carte({ boutique }: { boutique: (typeof BOUTIQUES)[number] }) {
         <p className="truncate text-sm text-muted-foreground">{boutique.univers}</p>
         <p className="text-sm font-semibold tabular-nums">{formatMoney(boutique.ventes)}</p>
       </div>
-    </li>
+    </div>
   );
 }
 
@@ -40,16 +41,16 @@ export function Shops() {
           description="Mode, beauté, électronique, artisanat : le même outil, des vitrines qui ne se ressemblent pas."
         />
 
-        {/* Défilement continu : la liste est dupliquée et l'animation translate
-            de la moitié, donc la boucle ne se voit pas. Le masque fade-x évite
-            que les cartes soient coupées net sur les bords, et le survol met en
-            pause pour qu'on puisse lire un nom. */}
-        <div className="fade-x w-full overflow-hidden">
-          <ul className="marquee-track flex w-max gap-4 hover:[animation-play-state:paused]">
-            {[...BOUTIQUES, ...BOUTIQUES].map((boutique, index) => (
-              <Carte key={`${boutique.nom}-${index}`} boutique={boutique} />
+        {/* Défilement continu par le composant Marquee de Magic UI : il duplique
+            le contenu autant de fois que nécessaire pour que la boucle ne se
+            voie pas. Le masque fade-x évite que les cartes soient coupées net
+            sur les bords, et la pause au survol laisse le temps de lire un nom. */}
+        <div className="fade-x w-full">
+          <Marquee pauseOnHover className="[--duration:40s]">
+            {BOUTIQUES.map((boutique) => (
+              <Carte key={boutique.nom} boutique={boutique} />
             ))}
-          </ul>
+          </Marquee>
         </div>
 
         <p className="text-sm text-muted-foreground">

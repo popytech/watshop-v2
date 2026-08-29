@@ -27,6 +27,9 @@
       "headers": {
         "Authorization": "Bearer ${TWENTY_FIRST_API_KEY}"
       }
+    },
+    "@magicui": {
+      "url": "https://magicui.design/r/{name}.json"
     }
   }
 }
