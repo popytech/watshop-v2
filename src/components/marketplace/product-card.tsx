@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Images, Store } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { FavoriteButton } from "@/components/marketplace/favorite-button";
 import { PhotoStrip } from "@/components/media/photo-strip";
 import { formatMoney } from "@/lib/format";
-import { effectivePrice } from "@/lib/shop/public";
-import type { MarketplaceProduct } from "@/lib/marketplace/queries";
+import { effectivePrice } from "@/lib/shop/price";
+import type { MarketplaceProduct } from "@/lib/marketplace/types";
 
 const TAILLES_IMAGE = "(min-width: 1024px) 33vw, 50vw";
 
@@ -39,6 +40,7 @@ export function MarketplaceProductCard({
   const enPromo = prix < product.price;
   const rupture = product.quantity <= 0;
   const devise = product.shops.currency_symbol;
+  const tailles = product.sizes ?? [];
 
   return (
     <li>
@@ -52,8 +54,16 @@ export function MarketplaceProductCard({
           />
 
           {enPromo ? <Badge className="absolute top-2 left-2">Promo</Badge> : null}
+
+          {/* Le cœur prend le coin haut droit ; la mention « Rupture » descend
+              alors sous lui pour ne pas se chevaucher. */}
+          <FavoriteButton
+            productId={product.id}
+            nom={product.name}
+            className="absolute top-2 right-2"
+          />
           {rupture ? (
-            <Badge variant="secondary" className="absolute top-2 right-2">
+            <Badge variant="secondary" className="absolute top-12 right-2">
               Rupture
             </Badge>
           ) : null}
@@ -71,6 +81,27 @@ export function MarketplaceProductCard({
         </div>
 
         <div className="space-y-1 text-center">
+          {/* À la place des pastilles de couleur de Your Next Store : nos
+              produits n'ont pas de déclinaisons de couleur, ils ont des tailles.
+              Au-delà de quatre, le reste est compté plutôt qu'aligné. */}
+          {tailles.length > 0 ? (
+            <ul className="flex flex-wrap items-center justify-center gap-1">
+              {tailles.slice(0, 4).map((taille) => (
+                <li
+                  key={taille}
+                  className="rounded border px-1.5 py-px text-[0.65rem] text-muted-foreground"
+                >
+                  {taille}
+                </li>
+              ))}
+              {tailles.length > 4 ? (
+                <li className="text-[0.65rem] text-muted-foreground">
+                  +{tailles.length - 4}
+                </li>
+              ) : null}
+            </ul>
+          ) : null}
+
           <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
 
           <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">

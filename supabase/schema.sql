@@ -394,6 +394,26 @@ create index push_tokens_user_id_idx on public.push_tokens (user_id);
 -- Row Level Security
 -- ============================================================
 
+
+-- ============================================================
+-- Infolettre
+-- ============================================================
+
+-- Le pied de page propose de laisser son adresse pour etre prevenu des
+-- nouveautes. Sans table, le champ ne serait qu'un decor : personne ne lit
+-- cette table depuis le navigateur, l'inscription passe par une action serveur.
+create table public.newsletter_subscribers (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  source text not null default 'footer',
+  consented_at timestamptz not null default now(),
+  unsubscribed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index newsletter_subscribers_created_at_idx
+  on public.newsletter_subscribers (created_at desc);
+
 alter table public.profiles enable row level security;
 alter table public.shops enable row level security;
 alter table public.categories enable row level security;
@@ -412,6 +432,7 @@ alter table public.push_tokens enable row level security;
 alter table public.shop_visits enable row level security;
 alter table public.payments enable row level security;
 alter table public.agent_applications enable row level security;
+alter table public.newsletter_subscribers enable row level security;
 
 -- Lecture publique du catalogue actif (boutique publique, marketplace)
 -- Une boutique n'est publique qu'une fois publiée.
@@ -528,6 +549,12 @@ create policy "agent_applications_self_update" on public.agent_applications for 
 
 create policy "payments_self_read" on public.payments for select using (auth.uid() = user_id);
 create policy "payments_self_insert" on public.payments for insert with check (auth.uid() = user_id);
+
+-- Personne ne lit ni n'écrit les inscrits depuis le navigateur : un `select`
+-- public exposerait toutes les adresses, un `insert` public laisserait remplir
+-- la table depuis la console. L'inscription passe par une action serveur.
+create policy "newsletter_admin_all" on public.newsletter_subscribers
+  for all using (public.is_admin()) with check (public.is_admin());
 
 create policy "shop_visits_owner_read" on public.shop_visits for select
   using (exists (select 1 from public.shops s where s.id = shop_id and s.user_id = auth.uid()));

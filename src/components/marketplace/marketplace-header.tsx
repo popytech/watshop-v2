@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/brand/logo";
+import { FavorisLien } from "@/components/marketplace/favoris-lien";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,7 @@ export function MarketplaceHeader({ connecte }: { connecte: boolean }) {
         </form>
 
         <div className="flex items-center gap-2">
+          <FavorisLien />
           <ThemeToggle />
           {connecte ? (
             <Button asChild size="sm">

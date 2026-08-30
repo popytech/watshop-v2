@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Marquee } from "@/components/ui/marquee";
 import { Section, SectionHeader } from "@/components/landing/section";
 import { formatMoney } from "@/lib/format";
-import { effectivePrice } from "@/lib/shop/public";
-import { getLandingProducts, type MarketplaceProduct } from "@/lib/marketplace/queries";
+import { effectivePrice } from "@/lib/shop/price";
+import { getLandingProducts } from "@/lib/marketplace/queries";
+import type { MarketplaceProduct } from "@/lib/marketplace/types";
 
 /**
  * Bandeau des produits en vente, sur la page d'accueil.

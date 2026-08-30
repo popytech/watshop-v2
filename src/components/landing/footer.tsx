@@ -1,6 +1,19 @@
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
+import { FacebookIcon, InstagramIcon, TiktokIcon } from "@/components/brand/social-icons";
+import { NewsletterForm } from "@/components/landing/newsletter-form";
+import { PAYMENT_METHODS, SOCIAL_LINKS } from "@/lib/site-links";
+import { cn } from "@/lib/utils";
+
+// Une icône par identifiant de SOCIAL_LINKS.
+const ICONES = {
+  whatsapp: MessageCircle,
+  facebook: FacebookIcon,
+  instagram: InstagramIcon,
+  tiktok: TiktokIcon,
+} as const;
 
 // Ancres préfixées par « / » : ce pied de page sert aussi au marketplace, d'où
 // un « #tarifs » seul ne mènerait nulle part.
@@ -34,12 +47,55 @@ export function LandingFooter() {
   return (
     <footer className="border-t">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12">
-        <div className="flex flex-col gap-8 sm:flex-row sm:justify-between">
-          <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-10 lg:flex-row lg:justify-between">
+          <div className="flex flex-col gap-4">
             <Logo />
             <p className="max-w-xs text-sm text-muted-foreground">
               La boutique en ligne des commerçants africains, pensée pour WhatsApp.
             </p>
+
+            {/* Seuls les comptes réellement ouverts sont rendus : une icône qui
+                mène à une page inexistante fait plus de mal qu'une icône
+                absente. Voir src/lib/site-links.ts pour en activer d'autres. */}
+            <ul className="flex items-center gap-2">
+              {SOCIAL_LINKS.filter((lien) => lien.href).map((lien) => {
+                const Icone = ICONES[lien.id];
+                return (
+                  <li key={lien.id}>
+                    <a
+                      href={lien.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={lien.label}
+                      className="flex size-9 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                    >
+                      <Icone className="size-4" />
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium">Moyens de paiement acceptés</p>
+              {/* En toutes lettres plutôt qu'en logos de cartes : Watshop
+                  n'accepte ni Visa ni Mastercard, et en afficher les logos
+                  serait faux. */}
+              <ul className="flex flex-wrap gap-1.5">
+                {PAYMENT_METHODS.map((moyen) => (
+                  <li
+                    key={moyen.label}
+                    className={cn(
+                      "rounded border px-2 py-0.5 text-[0.7rem]",
+                      moyen.aVenir ? "text-muted-foreground/60" : "text-muted-foreground",
+                    )}
+                  >
+                    {moyen.label}
+                    {moyen.aVenir ? " (bientôt)" : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* Trois colonnes tiennent mal côte à côte sur 360 px : elles passent
@@ -59,6 +115,11 @@ export function LandingFooter() {
                 ))}
               </div>
             ))}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">Rester au courant</p>
+            <NewsletterForm />
           </div>
         </div>
 

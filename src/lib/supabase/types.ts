@@ -244,6 +244,15 @@ type PushToken = {
   updated_at: string;
 }
 
+type NewsletterSubscriber = {
+  id: string;
+  email: string;
+  source: string;
+  consented_at: string;
+  unsubscribed_at: string | null;
+  created_at: string;
+}
+
 // Forme attendue par supabase-js : sans Relationships (et sans Views/Functions
 // plus bas), l'inférence des colonnes dans .select("a, b") retombe sur never.
 //
@@ -275,6 +284,7 @@ export type Database = {
       affiliate_clicks: TableDef<AffiliateClick>;
       agent_commission_payouts: TableDef<AgentCommissionPayout>;
       push_tokens: TableDef<PushToken>;
+      newsletter_subscribers: TableDef<NewsletterSubscriber>;
       shop_visits: TableDef<ShopVisit>;
       payments: TableDef<Payment>;
       agent_applications: TableDef<AgentApplication>;

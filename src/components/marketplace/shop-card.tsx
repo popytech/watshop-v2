@@ -4,7 +4,8 @@ import { BadgeCheck, Package, Store } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { formatNumber } from "@/lib/format";
-import { productCount, type MarketplaceShop } from "@/lib/marketplace/queries";
+import { productCount } from "@/lib/marketplace/queries";
+import type { MarketplaceShop } from "@/lib/marketplace/types";
 import { shopPath } from "@/lib/tenant";
 
 export function ShopCard({ shop }: { shop: MarketplaceShop }) {

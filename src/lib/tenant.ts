@@ -51,6 +51,7 @@ export const RESERVED_SLUGS = new Set([
   "livreurs",
   "boutiques",
   "recherche",
+  "favoris",
   "panier",
   "commande",
   "commandes",

@@ -1,11 +1,8 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/supabase/types";
 import { PAGE_SIZE, type MarketplaceParams } from "@/lib/marketplace/params";
-
-type Shop = Database["public"]["Tables"]["shops"]["Row"];
-type Product = Database["public"]["Tables"]["products"]["Row"];
+import type { MarketplaceProduct, MarketplaceShop, Page } from "@/lib/marketplace/types";
 
 /*
  * Lectures du marketplace, faites avec le client anonyme.
@@ -17,21 +14,7 @@ type Product = Database["public"]["Tables"]["products"]["Row"];
  * deux oublie la condition, c'est la RLS qui tient.
  */
 
-export type MarketplaceShop = Shop & {
-  /** Compte des produits visibles, remonté par la jointure. */
-  products: { count: number }[];
-};
-
-export type MarketplaceProduct = Product & {
-  product_images: { url: string; alt_text: string; position: number }[];
-  shops: Pick<Shop, "slug" | "name" | "currency_symbol" | "category">;
-};
-
-export type Page<T> = {
-  items: T[];
-  total: number;
-  page: number;
-};
+export type { MarketplaceShop, MarketplaceProduct, Page } from "@/lib/marketplace/types";
 
 /**
  * PostgREST refuse une plage qui commence après la dernière ligne : demander

@@ -75,14 +75,4 @@ export async function getPublishedShops(): Promise<Pick<Shop, "slug" | "created_
   return data ?? [];
 }
 
-/** Trie les images par position et renvoie la principale en premier. */
-export function sortedImages(product: PublicProduct) {
-  return [...(product.product_images ?? [])].sort((a, b) => a.position - b.position);
-}
-
-/** Prix effectivement payé : le promo s'il est valide, sinon le prix normal. */
-export function effectivePrice(product: Pick<Product, "price" | "promo_price">): number {
-  return product.promo_price !== null && product.promo_price < product.price
-    ? product.promo_price
-    : product.price;
-}
+export { effectivePrice, sortedImages } from "@/lib/shop/price";
