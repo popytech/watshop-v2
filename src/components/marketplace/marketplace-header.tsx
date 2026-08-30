@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -48,6 +50,22 @@ export function MarketplaceHeader({ connecte }: { connecte: boolean }) {
             );
           })}
         </nav>
+
+        {/* La recherche vit dans l'en-tête, comme sur la vitrine de Your Next
+            Store : elle suit d'une page à l'autre au lieu d'être enfermée dans
+            le catalogue. Un formulaire GET, donc opérant sans JavaScript.
+            Masquée sur téléphone faute de place — elle y reste accessible dans
+            le panneau des filtres. */}
+        <form action="/produits" method="get" className="relative hidden flex-1 md:block md:max-w-xs">
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            name="q"
+            placeholder="Rechercher un produit…"
+            className="h-9 pl-9"
+            aria-label="Rechercher un produit"
+          />
+        </form>
 
         <div className="flex items-center gap-2">
           <ThemeToggle />

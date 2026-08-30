@@ -108,12 +108,7 @@ export default async function ProduitsPage({
 
   return (
     <>
-      <MarketplaceHero
-        params={params}
-        chemin={CHEMIN}
-        produits={comptes.produits}
-        boutiques={comptes.boutiques}
-      />
+      <MarketplaceHero produits={comptes.produits} boutiques={comptes.boutiques} />
 
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         {/* Barre d'outils : filtres à gauche, tri à droite. Pas de colonne

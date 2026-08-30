@@ -89,16 +89,39 @@ async function chercherPhotos(terme, combien) {
 }
 
 /** Télécharge une photo et la renvoie dans notre stockage. Null si ça échoue. */
+/**
+ * En-tetes de navigateur.
+ *
+ * Le CDN de StockSnap repond 403 avec une page HTML a qui n annonce ni
+ * navigateur ni provenance — et une page HTML enregistree sous un nom en .jpg
+ * s affiche comme une image cassee, sans que rien ne signale l erreur. D ou la
+ * verification des octets : c est le seul controle qui ne ment pas.
+ */
+const ENTETES = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+  Referer: "https://stocksnap.io/",
+  Accept: "image/avif,image/webp,image/jpeg,image/png,*/*",
+};
+
+/** Les premiers octets disent ce qu'est un fichier, quoi qu'en dise l'en-tête. */
+function estUneImage(octets) {
+  if (octets.byteLength < 1024) return false;
+  const jpeg = octets[0] === 0xff && octets[1] === 0xd8;
+  const png = octets[0] === 0x89 && octets[1] === 0x50;
+  const webp = octets[8] === 0x57 && octets[9] === 0x45;
+  return jpeg || png || webp;
+}
+
 async function transferer(sourceUrl, chemin) {
   try {
-    const reponse = await fetch(sourceUrl, { headers: { "User-Agent": "watshop-seed/1.0" } });
+    const reponse = await fetch(sourceUrl, { headers: ENTETES });
     if (!reponse.ok) return null;
 
-    const type = reponse.headers.get("content-type") ?? "image/jpeg";
-    if (!type.startsWith("image/")) return null;
-
     const octets = new Uint8Array(await reponse.arrayBuffer());
-    if (octets.byteLength === 0) return null;
+    if (!estUneImage(octets)) return null;
+
+    const type = reponse.headers.get("content-type") ?? "image/jpeg";
 
     const { error } = await sb.storage.from(BUCKET).upload(chemin, octets, {
       contentType: type,

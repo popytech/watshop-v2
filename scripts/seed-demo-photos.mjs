@@ -79,17 +79,39 @@ async function chercher({ q, source, page }, combien) {
   }
 }
 
+/**
+ * En-têtes de navigateur.
+ *
+ * Le CDN de StockSnap répond 403 avec une page HTML à qui n'annonce ni
+ * navigateur ni provenance — et une page HTML enregistrée sous un nom en .jpg
+ * s'affiche comme une image cassée, sans que rien ne signale l'erreur. D'où la
+ * vérification des octets plus bas : c'est le seul contrôle qui ne ment pas.
+ */
+const ENTETES = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+  Referer: "https://stocksnap.io/",
+  Accept: "image/avif,image/webp,image/jpeg,image/png,*/*",
+};
+
+/** Les premiers octets d'un fichier disent ce qu'il est, quoi qu'en dise l'en-tête. */
+function estUneImage(octets) {
+  if (octets.byteLength < 1024) return false;
+  const jpeg = octets[0] === 0xff && octets[1] === 0xd8;
+  const png = octets[0] === 0x89 && octets[1] === 0x50;
+  const webp = octets[8] === 0x57 && octets[9] === 0x45;
+  return jpeg || png || webp;
+}
+
 async function transferer(sourceUrl, chemin) {
   try {
-    const reponse = await fetch(sourceUrl, { headers: { "User-Agent": "watshop-seed/1.0" } });
+    const reponse = await fetch(sourceUrl, { headers: ENTETES });
     if (!reponse.ok) return null;
 
-    const type = reponse.headers.get("content-type") ?? "image/jpeg";
-    if (!type.startsWith("image/")) return null;
-
     const octets = new Uint8Array(await reponse.arrayBuffer());
-    if (octets.byteLength === 0) return null;
+    if (!estUneImage(octets)) return null;
 
+    const type = reponse.headers.get("content-type") ?? "image/jpeg";
     const { error } = await sb.storage
       .from(BUCKET)
       .upload(chemin, octets, { contentType: type, upsert: true });
@@ -99,6 +121,37 @@ async function transferer(sourceUrl, chemin) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Retire les photos qui n'en sont pas.
+ *
+ * Elles seront recomptées comme manquantes et recherchées à nouveau par la
+ * suite du script.
+ */
+async function purgerCassees(produits) {
+  const suspectes = [];
+
+  await Promise.all(
+    (produits ?? []).flatMap((produit) =>
+      (produit.product_images ?? []).map(async (image) => {
+        try {
+          const reponse = await fetch(image.url);
+          const octets = new Uint8Array(await reponse.arrayBuffer());
+          if (!estUneImage(octets) || octets.byteLength < 15_000) suspectes.push(image.url);
+        } catch {
+          suspectes.push(image.url);
+        }
+      }),
+    ),
+  );
+
+  if (suspectes.length > 0) {
+    await sb.from("product_images").delete().in("url", suspectes);
+    console.log(`${suspectes.length} photo(s) illisible(s) ou trop petite(s) retirée(s).\n`);
+  }
+
+  return new Set(suspectes);
 }
 
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -125,8 +178,13 @@ async function main() {
     .select("id, name, shop_id, product_images(url, position)")
     .in("shop_id", idsDemo);
 
+  // Les fichiers illisibles sont écartés avant de compter : sans quoi un article
+  // dont les deux photos sont cassées passerait pour servi.
+  const retirees = await purgerCassees(produits);
+
   for (const produit of produits ?? []) {
-    for (const image of produit.product_images ?? []) dejaEnBase.add(image.url);
+    produit.product_images = (produit.product_images ?? []).filter((i) => !retirees.has(i.url));
+    for (const image of produit.product_images) dejaEnBase.add(image.url);
   }
 
   const aCompleter = (produits ?? []).filter(
