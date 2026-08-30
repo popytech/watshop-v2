@@ -21,6 +21,10 @@ export default async function ProductsPage() {
   // n'apprendrait rien, plus tard il arriverait après le refus.
   const bientotPlein = !pro && restants <= 3;
 
+  // Masqués par l'échéance, pas par le vendeur : il doit savoir pourquoi sa
+  // vitrine s'est vidée, et que rien n'est perdu.
+  const masques = products.filter((produit) => produit.hidden_by_plan).length;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-3">
@@ -38,6 +42,22 @@ export default async function ProductsPage() {
           </Link>
         </Button>
       </div>
+
+      {masques > 0 ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm">
+            <span className="font-medium">
+              {masques} produit{masques > 1 ? "s" : ""} ne {masques > 1 ? "sont" : "est"} plus
+              visible{masques > 1 ? "s" : ""} dans votre boutique
+            </span>{" "}
+            depuis la fin de votre abonnement. Rien n&apos;est supprimé : ils reviennent tous
+            en ligne dès votre réabonnement.
+          </p>
+          <Button asChild size="sm" className="shrink-0">
+            <Link href="/dashboard/abonnement">Réactiver</Link>
+          </Button>
+        </div>
+      ) : null}
 
       {bientotPlein ? (
         <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">

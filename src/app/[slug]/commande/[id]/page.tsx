@@ -13,7 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ClearCart } from "@/components/storefront/clear-cart";
 import { getPublicShop } from "@/lib/shop/public";
-import { getPublicOrder } from "@/lib/order/public";
+import { getPublicOrder, getSellerWhatsApp } from "@/lib/order/public";
 import { formatMoney, orderReference } from "@/lib/format";
 import { shopPath } from "@/lib/tenant";
 import { whatsappLink } from "@/lib/whatsapp";
@@ -29,6 +29,9 @@ export default async function OrderConfirmationPage({ params }: Props) {
 
   const order = await getPublicOrder(id, shop.id);
   if (!order) notFound();
+
+  // Lu par le rôle serveur : la colonne n'est plus accessible au public.
+  const numeroVendeur = await getSellerWhatsApp(shop.id, order.id);
 
   const reference = orderReference(order.id, order.source);
   const sousTotal = order.order_items.reduce(
@@ -58,10 +61,10 @@ export default async function OrderConfirmationPage({ params }: Props) {
         </p>
       </div>
 
-      {shop.whatsapp_number ? (
+      {numeroVendeur ? (
         <Button asChild size="lg" className="h-12 w-full">
           <a
-            href={whatsappLink(shop.whatsapp_number, messageVendeur)}
+            href={whatsappLink(numeroVendeur, messageVendeur)}
             target="_blank"
             rel="noopener noreferrer"
           >

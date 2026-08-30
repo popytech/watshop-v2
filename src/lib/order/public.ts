@@ -50,3 +50,38 @@ export async function getPublicOrder(
 
   return data as unknown as PublicOrder;
 }
+
+/**
+ * Le numéro WhatsApp du vendeur, pour une commande précise.
+ *
+ * Il n'est plus lisible par le rôle anonyme : la colonne lui a été retirée, un
+ * numéro de commerçant n'ayant rien à faire dans une réponse publique où
+ * n'importe qui pouvait le moissonner. La lecture passe donc par le rôle
+ * serveur — et seulement ici, sur une page attachée à une commande réelle, dont
+ * l'identifiant a été vérifié juste avant.
+ *
+ * C'est la nuance qui compte : l'acheteur peut toujours joindre son vendeur,
+ * mais après avoir passé commande, pas à la place.
+ */
+export async function getSellerWhatsApp(shopId: string, orderId: string): Promise<string | null> {
+  const admin = createAdminClient();
+
+  // La commande doit exister et appartenir à cette boutique. Sans ce contrôle,
+  // l'identifiant d'une boutique suffirait à obtenir son numéro.
+  const { data: commande } = await admin
+    .from("orders")
+    .select("id")
+    .eq("id", orderId)
+    .eq("shop_id", shopId)
+    .maybeSingle();
+
+  if (!commande) return null;
+
+  const { data: shop } = await admin
+    .from("shops")
+    .select("whatsapp_number")
+    .eq("id", shopId)
+    .maybeSingle();
+
+  return shop?.whatsapp_number ?? null;
+}

@@ -77,6 +77,8 @@ type Product = {
   quantity: number;
   sizes: string[] | null;
   is_active: boolean;
+  /** Masqué faute d'abonnement, pas par le vendeur. Voir migration 0013. */
+  hidden_by_plan: boolean;
   is_sponsored: boolean;
   reseller_commission_pct: number;
   view_count: number;

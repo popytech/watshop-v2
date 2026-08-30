@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { MessageCircle } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProductCard } from "@/components/storefront/product-card";
 import { SharePanel } from "@/components/shop/share-panel";
@@ -10,7 +8,6 @@ import { VisitTracker } from "@/components/storefront/visit-tracker";
 import { getPublicProducts, getPublicShop } from "@/lib/shop/public";
 import { getSiteUrl } from "@/lib/site-url";
 import { shopPath } from "@/lib/tenant";
-import { whatsappLink } from "@/lib/whatsapp";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -73,21 +70,12 @@ export default async function ShopPage({ params }: Props) {
             <p className="text-sm text-muted-foreground">{shop.description}</p>
           ) : null}
 
-          {shop.whatsapp_number ? (
-            <Button asChild size="lg" className="h-11 sm:self-start">
-              <a
-                href={whatsappLink(
-                  shop.whatsapp_number,
-                  `Bonjour ${shop.name}, j'ai une question sur votre boutique.`,
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MessageCircle />
-                Contacter la boutique
-              </a>
-            </Button>
-          ) : null}
+          {/* Le bouton « Contacter la boutique » a été retiré.
+              Il ouvrait WhatsApp sans qu'aucune commande n'existe : l'acheteur
+              et le vendeur se retrouvaient en tête-à-tête, et la vente se
+              concluait sans que Watshop n'en voie jamais la trace. On peut
+              toujours écrire au vendeur — depuis la page de confirmation, une
+              fois la commande passée. */}
         </div>
 
         {products.length > 0 ? (

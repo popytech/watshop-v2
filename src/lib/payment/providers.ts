@@ -45,6 +45,19 @@ export const PRO_CURRENCY = "GNF";
 export const LIMITES_GRATUIT = {
   produits: 10,
   photosParProduit: 1,
+  /**
+   * Ce qui reste en vitrine quand un abonnement Pro arrive à échéance.
+   *
+   * Moins que les dix d'un compte gratuit, et c'est voulu : un vendeur qui a
+   * publié cinquante articles doit sentir ce qu'il perd, sans rien perdre pour
+   * de bon. Le catalogue est masqué, jamais supprimé, et le réabonnement le
+   * rallume en entier.
+   *
+   * La valeur vit aussi en base — `produits_visibles_gratuit()`, migration
+   * 0013 — parce que c'est la RLS qui applique la règle. Les deux doivent
+   * changer ensemble.
+   */
+  produitsApresExpiration: 7,
 };
 
 /** Le plafond de photos reste celui du stockage, quelle que soit la formule. */
@@ -91,9 +104,15 @@ export const PLANS = [
     id: "business" as const,
     nom: "Business",
     prix: 150_000,
-    accroche: "Pour plusieurs points de vente ou une équipe.",
+    accroche: "Pour importer, approvisionner et vendre à plusieurs.",
+    // Les deux premières lignes ne sont pas des fonctionnalités de
+    // l'application : ce sont des services rendus par l'équipe Watshop. Elles
+    // ne figurent donc pas dans `aVenir` — un abonné Business y a droit dès le
+    // premier jour, et c'est à nous de tenir, pas au code.
     inclus: [
       "Tout ce que contient l'offre Pro",
+      "Mise en relation avec des fournisseurs en Chine",
+      "Transitaires partenaires et suivi de vos colis",
       "Plusieurs boutiques sur un même compte",
       "Comptes vendeurs pour votre équipe",
       "Nom de domaine personnalisé",

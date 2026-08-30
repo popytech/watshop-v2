@@ -135,6 +135,11 @@ create table public.products (
   quantity integer not null default 0,
   sizes text[],
   is_active boolean not null default true,
+  -- Masqué faute d'abonnement, et non par le vendeur : à l'échéance d'un
+  -- abonnement Pro, tout ce qui dépasse les sept articles les plus récents
+  -- sort de la vitrine sans être supprimé. Une colonne à part, car
+  -- `is_active` appartient au vendeur et son choix ne doit pas être écrasé.
+  hidden_by_plan boolean not null default false,
   is_sponsored boolean not null default false,
   reseller_commission_pct integer not null default 0,
   view_count integer not null default 0,
@@ -152,6 +157,7 @@ create table public.products (
 );
 
 create index products_shop_id_idx on public.products (shop_id);
+create index products_hidden_by_plan_idx on public.products (shop_id, hidden_by_plan);
 create unique index products_shop_slug_idx on public.products (shop_id, slug);
 create index products_category_id_idx on public.products (category_id);
 create index products_effective_price_idx on public.products (effective_price);
@@ -442,6 +448,7 @@ create policy "categories_public_read" on public.categories for select using (tr
 create policy "products_public_read" on public.products for select
   using (
     is_active = true
+    and hidden_by_plan = false
     and exists (
       select 1 from public.shops s
       where s.id = shop_id and s.is_active = true and s.published_at is not null
