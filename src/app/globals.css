@@ -87,6 +87,19 @@
     }
   }
 
+  /* Les deux précédentes, dépouillées de leur déplacement : c'est ce qui reste
+     quand le visiteur demande moins de mouvement (voir plus bas). Sans elle, il
+     faudrait choisir entre lui infliger un glissement ou ne rien lui montrer,
+     puisque nos éléments partent d'une opacité nulle. */
+  @keyframes appear-fade {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
   /* Posé par `shadcn add @magicui/marquee`. Reformaté, pas modifié. */
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
@@ -196,12 +209,40 @@
   }
 }
 
+/* Mouvement réduit.
+ *
+ * Ce réglage n'est pas rare chez nous : sur Android, le mode économie de
+ * batterie suffit à le déclencher dans Chrome, et beaucoup de nos visiteurs le
+ * laissent allumé en permanence. Une coupure générale revenait donc à ne jamais
+ * montrer nos animations à une bonne partie du public.
+ *
+ * Ce qui gêne réellement — vertiges, nausées — c'est le déplacement : boucles
+ * sans fin, zooms, parallaxe. Un fondu d'opacité, non : les recommandations
+ * d'accessibilité le considèrent comme sûr. On coupe donc le mouvement, et on
+ * garde les fondus.
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Un défilement continu n'a pas d'état final utile. Le précipiter — ce que
+     faisait `animation-duration: 0.01ms` — le laissait figé à la fin de sa
+     course, cartes décalées hors de l'écran. Il reste donc immobile à son
+     point de départ, et la liste se lit normalement. */
+  .animate-marquee,
+  .animate-marquee-vertical {
+    animation: none !important;
+  }
+
+  /* Les apparitions gardent leur fondu et perdent leur déplacement. Les
+     laisser telles quelles infligerait un glissement et un zoom à qui demande
+     le contraire ; les supprimer laisserait la page vide, nos éléments partant
+     d'une opacité nulle. */
+  .animate-appear,
+  .animate-appear-zoom {
+    animation: appear-fade 0.4s ease-out forwards !important;
   }
 }
