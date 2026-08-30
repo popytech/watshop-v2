@@ -2,13 +2,18 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/logo";
+import { LandingNavMobile, type LienNav } from "@/components/landing/landing-nav-mobile";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
+// Le marketplace d'abord, les arguments de vente ensuite : un visiteur qui
+// arrive sur watshop.africa vient plus souvent acheter que créer une boutique.
+//
 // `route` sort de la page d'accueil : un <Link> plutôt qu'une ancre, pour que
 // la navigation reste côté client et la page soit préchargée au survol.
-const LIENS = [
-  { href: "#fonctionnement", label: "Fonctionnement" },
+const LIENS: LienNav[] = [
+  { href: "/produits", label: "Produits", route: true },
   { href: "/boutiques", label: "Boutiques", route: true },
+  { href: "#fonctionnement", label: "Fonctionnement" },
   { href: "#tarifs", label: "Tarifs" },
   { href: "#questions", label: "Questions" },
 ];
@@ -19,8 +24,9 @@ export function LandingNav({ connecte }: { connecte: boolean }) {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Logo />
 
-        {/* Masquée sur téléphone : quatre liens de plus y encombreraient sans
-            rien apporter, la page se parcourt au pouce. */}
+        {/* Sur téléphone ces liens passent dans le panneau du menu : les masquer
+            sans rien mettre à la place rendait le marketplace introuvable là où
+            sont justement nos visiteurs. */}
         <nav className="hidden items-center gap-1 md:flex">
           {LIENS.map((lien) => (
             <Button key={lien.href} asChild variant="ghost" size="sm">
@@ -49,6 +55,8 @@ export function LandingNav({ connecte }: { connecte: boolean }) {
               </Button>
             </>
           )}
+
+          <LandingNavMobile liens={LIENS} connecte={connecte} />
         </div>
       </div>
     </header>

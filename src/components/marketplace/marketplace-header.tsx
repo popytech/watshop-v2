@@ -8,9 +8,11 @@ import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { cn } from "@/lib/utils";
 
+// Les produits d'abord : on vient chercher un article, pas un commerçant. Les
+// boutiques sont la façon d'explorer ensuite, pas l'entrée.
 const ONGLETS = [
-  { href: "/boutiques", label: "Boutiques" },
   { href: "/produits", label: "Produits" },
+  { href: "/boutiques", label: "Boutiques" },
 ];
 
 /**

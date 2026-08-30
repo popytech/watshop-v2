@@ -8,8 +8,8 @@ const COLONNES = [
   {
     titre: "Acheter",
     liens: [
-      { href: "/boutiques", label: "Toutes les boutiques" },
       { href: "/produits", label: "Tous les produits" },
+      { href: "/boutiques", label: "Toutes les boutiques" },
     ],
   },
   {
