@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
@@ -10,19 +11,46 @@ import { formatMoney } from "@/lib/format";
 // Boutiques et montants fournis par Watshop, pas calculés depuis la base : d'où
 // le libellé « chiffre d'affaires » et non « ventes réalisées sur Watshop »,
 // qui serait une affirmation que l'application ne peut pas justifier.
+// Une photo par univers, à la place des emojis qui donnaient à la section un
+// air de brouillon. Fichiers locaux et non produits tirés de la base : ces
+// cartes servent d'illustration et ne doivent pas dépendre de ce qui est en
+// vente à l'instant T. Photos StockSnap sous licence CC0, choisies sans marque
+// visible — un logo de tiers sur notre page d'accueil suggérerait une
+// association qui n'existe pas.
 const BOUTIQUES = [
-  { nom: "Gnakry Shop", univers: "Prêt-à-porter", emoji: "👕", ventes: 3_200_000 },
-  { nom: "Binta Shop", univers: "Beauté & cosmétiques", emoji: "💄", ventes: 2_000_000 },
-  { nom: "Fatima Fashion", univers: "Mode femme", emoji: "👗", ventes: 1_500_000 },
-  { nom: "Boutique ABK & Frère", univers: "Électronique", emoji: "📱", ventes: 450_000 },
-  { nom: "Mister Popy", univers: "Accessoires", emoji: "🕶️", ventes: 250_000 },
+  {
+    nom: "Gnakry Shop",
+    univers: "Prêt-à-porter",
+    image: "/boutique-mode-homme.jpg",
+    ventes: 3_200_000,
+  },
+  {
+    nom: "Binta Shop",
+    univers: "Beauté & cosmétiques",
+    image: "/boutique-beaute.jpg",
+    ventes: 2_000_000,
+  },
+  { nom: "Fatima Fashion", univers: "Mode femme", image: "/boutique-mode-femme.jpg", ventes: 1_500_000 },
+  {
+    nom: "Boutique ABK & Frère",
+    univers: "Électronique",
+    image: "/boutique-electronique.jpg",
+    ventes: 450_000,
+  },
+  { nom: "Mister Popy", univers: "Accessoires", image: "/boutique-accessoires.jpg", ventes: 250_000 },
 ];
 
 function Carte({ boutique }: { boutique: (typeof BOUTIQUES)[number] }) {
   return (
     <div className="glass-4 flex w-72 shrink-0 items-center gap-4 rounded-xl p-4">
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted text-2xl">
-        {boutique.emoji}
+      <span className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+        <Image
+          src={boutique.image}
+          alt=""
+          fill
+          sizes="48px"
+          className="object-cover"
+        />
       </span>
       <div className="min-w-0">
         <p className="truncate font-medium">{boutique.nom}</p>
