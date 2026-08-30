@@ -925,6 +925,16 @@ begin
     where user_id = new.user_id;
 
     update public.profiles set is_pro = true where id = new.user_id;
+
+    -- La mise en avant : le marketplace trie dessus, c'est la contrepartie Pro
+    -- la plus immédiatement visible.
+    update public.shops set is_sponsored = true where user_id = new.user_id;
+
+    -- Et tout ce qu'une échéance précédente avait masqué revient en vitrine.
+    update public.products
+    set hidden_by_plan = false
+    where hidden_by_plan = true
+      and shop_id in (select id from public.shops where user_id = new.user_id);
   end if;
 
   return new;
@@ -934,6 +944,108 @@ $$;
 create trigger payments_apply_confirmed
   before update on public.payments
   for each row execute function public.apply_confirmed_payment();
+
+-- ============================================================
+-- Cycle de l'abonnement
+-- ============================================================
+
+-- Référence unique : l'application et la base doivent répondre la même chose à
+-- « ce compte est-il Pro maintenant ». En security definer, pour que la
+-- boutique publique puisse poser la question sans avoir le droit de lire la
+-- table des abonnements, qui ne regarde que son propriétaire.
+create function public.is_pro_active(uid uuid)
+returns boolean
+language sql
+stable
+security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.subscriptions s
+    where s.user_id = uid
+      and s.is_active = true
+      and s.plan <> 'free'
+      and (s.ends_at is null or s.ends_at > now())
+  );
+$$;
+
+-- Combien d'articles restent en vitrine après une échéance. Moins que les dix
+-- du gratuit, et c'est voulu : on doit sentir ce qu'on perd. À garder aligné
+-- avec LIMITES_GRATUIT.produitsApresExpiration côté application.
+create function public.produits_visibles_gratuit()
+returns integer
+language sql
+immutable
+as $$ select 7; $$;
+
+-- Ferme les abonnements arrivés à terme. Écrite pour être rejouée sans dommage
+-- et à n'importe quelle fréquence : elle ne touche que les lignes réellement
+-- échues, et ne rouvre jamais un accès. À brancher sur une tâche planifiée —
+-- sans elle, rien n'expire et un mois payé vaut un accès à vie.
+create function public.expire_subscriptions()
+returns integer
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  echus integer;
+begin
+  with termines as (
+    update public.subscriptions
+    set is_active = false, plan = 'free'
+    where is_active = true
+      and ends_at is not null
+      and ends_at < now()
+    returning user_id
+  )
+  select count(*) into echus from termines;
+
+  update public.profiles p
+  set is_pro = false
+  where p.is_pro = true and not public.is_pro_active(p.id);
+
+  update public.shops sh
+  set is_sponsored = false
+  where sh.is_sponsored = true and not public.is_pro_active(sh.user_id);
+
+  -- Le masquage ne vise que les comptes qui ont payé puis laissé filer : un
+  -- vendeur gratuit qui n'a jamais rien dû garde ses dix articles.
+  -- `ends_at` n'est renseignée que par la confirmation d'un paiement : non
+  -- nulle, elle signe un abonnement qui a existé.
+  update public.products p
+  set hidden_by_plan = true
+  where p.hidden_by_plan = false
+    and exists (
+      select 1
+      from public.shops sh
+      join public.subscriptions s on s.user_id = sh.user_id
+      where sh.id = p.shop_id
+        and s.ends_at is not null
+        and s.ends_at < now()
+        and not public.is_pro_active(sh.user_id)
+    )
+    and p.id not in (
+      select id from public.products
+      where shop_id = p.shop_id
+      order by created_at desc
+      limit public.produits_visibles_gratuit()
+    );
+
+  return echus;
+end;
+$$;
+
+-- Le numéro du vendeur n'est pas public.
+--
+-- `shops_public_read` renvoie la ligne entière : sans ce retrait, n'importe qui
+-- pourrait moissonner avec la clé anonyme le WhatsApp et le Mobile Money de
+-- tous les commerçants publiés — une fuite de données autant qu'une invitation
+-- à court-circuiter la plateforme. La RLS ne filtre pas colonne par colonne ;
+-- les privilèges de colonne, si.
+--
+-- Seul le rôle anonyme est visé : un privilège de colonne se retire par rôle et
+-- non par ligne, et le retirer à `authenticated` empêcherait le vendeur de lire
+-- son propre numéro depuis son tableau de bord.
+revoke select (whatsapp_number, mobile_money_number) on public.shops from anon;
 
 -- ============================================================
 -- Bucket privé des pièces de candidature agent
