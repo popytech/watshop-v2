@@ -4,7 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/fonnte";
 import { sendPushToUsers } from "@/lib/push/send";
 import { formatMoney } from "@/lib/format";
-import { PRO_CURRENCY, PRO_PRICE, LIMITES_GRATUIT } from "@/lib/payment/providers";
+import { LIMITES_GRATUIT } from "@/lib/payment/providers";
+import { deviseDuPays, tarifPro } from "@/lib/payment/pricing";
 import { getSiteUrl } from "@/lib/site-url";
 
 /*
@@ -29,16 +30,16 @@ export type Palier = {
   jours: number;
   titre: string;
   /** `restants` = jours avant la coupure effective. */
-  message: (params: { boutique: string; restants: number; url: string }) => string;
+  message: (params: { boutique: string; restants: number; url: string; prix: string }) => string;
 };
 
 export const PALIERS: Palier[] = [
   {
     jours: -7,
     titre: "Votre abonnement Pro se termine dans une semaine",
-    message: ({ boutique, url }) =>
+    message: ({ boutique, url, prix }) =>
       `Bonjour ! L'abonnement Pro de ${boutique} se termine dans 7 jours.\n\n` +
-      `Renouvelez pour ${formatMoney(PRO_PRICE, PRO_CURRENCY)} et gardez vos produits illimités, ` +
+      `Renouvelez pour ${prix} et gardez vos produits illimités, ` +
       `votre mise en avant et votre programme revendeurs.\n\n${url}`,
   },
   {
@@ -132,14 +133,25 @@ export async function envoyerRappels(): Promise<Bilan> {
 
     const { data: shop } = await admin
       .from("shops")
-      .select("name, whatsapp_number")
+      .select("name, whatsapp_number, country_code")
       .eq("user_id", abonnement.user_id)
       .maybeSingle();
 
     if (!shop) continue;
 
     const restants = JOURS_DE_GRACE + ecart; // jours avant la coupure réelle
-    const texte = palier.message({ boutique: shop.name, restants: Math.max(restants, 0), url });
+
+    // Le montant est annoncé dans la monnaie du vendeur : un Sénégalais à qui
+    // l'on parle en francs guinéens ne sait pas ce qu'on lui demande.
+    const devise = deviseDuPays(shop.country_code);
+    const prix = formatMoney(tarifPro(devise), devise);
+
+    const texte = palier.message({
+      boutique: shop.name,
+      restants: Math.max(restants, 0),
+      url,
+      prix,
+    });
     const canaux: string[] = [];
 
     // La trace est écrite d'abord : si deux exécutions se chevauchent, la
@@ -162,7 +174,7 @@ export async function envoyerRappels(): Promise<Bilan> {
 
     const push = await sendPushToUsers([abonnement.user_id], {
       title: palier.titre,
-      body: `${shop.name} — ${formatMoney(PRO_PRICE, PRO_CURRENCY)} pour renouveler`,
+      body: `${shop.name} — ${prix} pour renouveler`,
       url: "/dashboard/abonnement",
     });
     if (push.sent > 0) canaux.push("push");

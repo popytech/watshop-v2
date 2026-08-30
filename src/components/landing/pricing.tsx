@@ -3,6 +3,7 @@ import { Crown, Building2, Store } from "lucide-react";
 import { Section, SectionHeader } from "@/components/landing/section";
 import { PricingColumn } from "@/components/landing/pricing-column";
 import { PLANS, PLAN_RECOMMANDE, PRO_CURRENCY } from "@/lib/payment/providers";
+import { PAYS_SERVIS } from "@/lib/payment/pricing";
 import { formatMoney } from "@/lib/format";
 
 const ICONES = { free: Store, pro: Crown, business: Building2 };
@@ -45,6 +46,15 @@ export function Pricing() {
             );
           })}
         </div>
+
+        {/* Les prix affichés ici sont ceux de la Guinée : la page d'accueil ne
+            sait pas d'où vient son visiteur. Le montant réellement demandé est
+            celui du pays choisi à la création de la boutique — un vendeur
+            sénégalais paie en francs CFA, pas en francs guinéens. */}
+        <p className="text-center text-sm text-muted-foreground">
+          Prix indiqués en francs guinéens, convertis dans la monnaie de votre pays.
+          <br className="hidden sm:block" /> Watshop fonctionne en {PAYS_SERVIS.join(", ")}.
+        </p>
       </div>
     </Section>
   );

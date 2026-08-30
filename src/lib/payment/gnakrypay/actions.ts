@@ -7,7 +7,7 @@ import { verifySession } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/network/schemas";
-import { PRO_CURRENCY, PRO_PRICE } from "@/lib/payment/providers";
+import { deviseDuPays, tarifPro } from "@/lib/payment/pricing";
 import { demanderPaiement, estConfiguree, METHODES } from "@/lib/payment/gnakrypay/client";
 import { getSiteUrl } from "@/lib/site-url";
 import type { PaiementState } from "@/lib/payment/gnakrypay/state";
@@ -53,6 +53,12 @@ export async function lancerPaiement(
   // La Guinée par défaut : c'est le pays de la quasi-totalité de nos vendeurs,
   // et le sélecteur du formulaire le propose de toute façon en premier.
   const pays = parsed.data.countryCode ?? "GN";
+
+  // Le prix suit le pays du vendeur : son opérateur Mobile Money ne sait pas
+  // débiter une devise étrangère, et un montant affiché dans une monnaie
+  // qu'on ne manipule pas ne veut rien dire.
+  const devise = deviseDuPays(pays);
+  const montant = tarifPro(devise);
   const telephone = normalizePhone(parsed.data.telephone, pays);
   if (!telephone) return { message: "Ce numéro ne semble pas valide.", ok: false };
 
@@ -75,8 +81,8 @@ export async function lancerPaiement(
       user_id: session.userId,
       subscription_id: subscription?.id ?? null,
       provider: "gnakrypay",
-      amount: PRO_PRICE,
-      currency: PRO_CURRENCY,
+      amount: montant,
+      currency: devise,
       payer_phone: telephone,
       status: "pending",
     })
@@ -91,7 +97,7 @@ export async function lancerPaiement(
 
   try {
     const cree = await demanderPaiement({
-      montant: PRO_PRICE,
+      montant,
       // La passerelle attend le numéro sans le « + ».
       telephone: telephone.replace(/^\+/, ""),
       methode: parsed.data.methode as (typeof METHODES)[number]["id"],

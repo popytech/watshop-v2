@@ -14,10 +14,10 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePublishedShop } from "@/lib/shop/queries";
 import {
   listProviders,
-  PRO_CURRENCY,
-  PRO_PRICE,
+
   watshopMobileMoneyNumber,
 } from "@/lib/payment/providers";
+import { deviseDuPays, passerellePeutEncaisser, tarifPro } from "@/lib/payment/pricing";
 import { formatDate, formatMoney } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { GnakryPayForm } from "@/components/dashboard/gnakrypay-form";
@@ -47,6 +47,12 @@ export default async function SubscriptionPage() {
 
   const providers = listProviders();
   const numeroWatshop = watshopMobileMoneyNumber();
+  // Le prix affiché est celui du pays du vendeur, et c'est bien celui qui
+  // sera débité : la passerelle et la déclaration manuelle lisent la même
+  // table de tarifs.
+  const devise = deviseDuPays(shop.country_code);
+  const prix = tarifPro(devise);
+
   const estPro = profile.is_pro && subscription?.plan === "pro";
 
   return (
@@ -77,7 +83,7 @@ export default async function SubscriptionPage() {
           <CardHeader>
             <CardTitle className="text-base">Passer en Pro</CardTitle>
             <CardDescription>
-              {formatMoney(PRO_PRICE, PRO_CURRENCY)} par mois.
+              {formatMoney(prix, devise)} par mois.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
@@ -107,31 +113,38 @@ export default async function SubscriptionPage() {
               ))}
             </ul>
 
-            {estConfiguree() ? (
+            {estConfiguree() && passerellePeutEncaisser(devise) ? (
               <div className="flex flex-col gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
                 <p className="text-sm font-medium">Payer maintenant par GNAKRYPAY</p>
                 <GnakryPayForm
-                  montant={PRO_PRICE}
-                  devise={PRO_CURRENCY}
+                  montant={prix}
+                  devise={devise}
                   paysParDefaut={shop.country_code}
                   methodes={METHODES}
                 />
               </div>
             ) : null}
 
+            {estConfiguree() && !passerellePeutEncaisser(devise) ? (
+              <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                Le paiement en ligne n&apos;accepte pas encore votre monnaie. Utilisez le virement
+                Mobile Money ci-dessous — il est confirmé sous 24 h.
+              </p>
+            ) : null}
+
             {numeroWatshop ? (
               <div className="flex flex-col gap-4 rounded-lg border bg-muted/40 p-4">
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Envoyez {formatMoney(PRO_PRICE, PRO_CURRENCY)} par Mobile Money au numéro
+                    Envoyez {formatMoney(prix, devise)} par Mobile Money au numéro
                   </p>
                   <p className="font-mono text-lg font-semibold">
                     {formatPhone(numeroWatshop)}
                   </p>
                 </div>
                 <PaymentForm
-                  amount={PRO_PRICE}
-                  currency={PRO_CURRENCY}
+                  amount={prix}
+                  currency={devise}
                   countryCode={shop.country_code}
                 />
               </div>

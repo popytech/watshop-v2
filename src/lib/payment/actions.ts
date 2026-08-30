@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole, verifySession } from "@/lib/dal";
 import { fieldErrors, normalizePhone, paymentDeclarationSchema } from "@/lib/network/schemas";
-import { PRO_CURRENCY, PRO_PRICE, watshopMobileMoneyNumber } from "@/lib/payment/providers";
+import { watshopMobileMoneyNumber } from "@/lib/payment/providers";
+import { deviseDuPays } from "@/lib/payment/pricing";
 import type { FormState } from "@/lib/shop/state";
 
 /**
@@ -16,7 +17,7 @@ import type { FormState } from "@/lib/shop/state";
  */
 export async function declarePayment(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = paymentDeclarationSchema.safeParse({
-    amount: formData.get("amount") ?? String(PRO_PRICE),
+    amount: formData.get("amount") ?? "",
     reference: formData.get("reference") ?? "",
     payerPhone: formData.get("payerPhone") ?? "",
     countryCode: (formData.get("countryCode") as string) || undefined,
@@ -34,6 +35,17 @@ export async function declarePayment(_prev: FormState, formData: FormData): Prom
   const session = await verifySession();
   const supabase = await createClient();
 
+  // La devise suit le pays de la boutique. Le montant, lui, est celui que le
+  // vendeur déclare avoir envoyé : c'est un virement déjà fait, pas un prix
+  // qu'on lui impose — un administrateur le confrontera au relevé.
+  const { data: boutique } = await supabase
+    .from("shops")
+    .select("country_code")
+    .eq("user_id", session.userId)
+    .maybeSingle();
+
+  const devise = deviseDuPays(boutique?.country_code);
+
   const { data: subscription } = await supabase
     .from("subscriptions")
     .select("id")
@@ -45,7 +57,7 @@ export async function declarePayment(_prev: FormState, formData: FormData): Prom
     subscription_id: subscription?.id ?? null,
     provider: "manual",
     amount: parsed.data.amount,
-    currency: PRO_CURRENCY,
+    currency: devise,
     reference: parsed.data.reference,
     payer_phone: phone,
   });
