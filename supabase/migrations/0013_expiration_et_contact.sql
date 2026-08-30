@@ -3,6 +3,22 @@
 -- Delta idempotent, à appliquer après 0012. Deux sujets distincts, réunis parce
 -- qu'ils touchent les mêmes objets.
 
+-- Garde-fou.
+--
+-- Ce fichier s'appuie sur `is_pro_active`, créée par la migration 0012. Sans
+-- elle, l'échec ne survenait qu'à la dernière ligne, et le message accusait la
+-- 0013 alors que la 0012 était en cause — pire, l'éditeur SQL de Supabase
+-- rejoue le tout dans une transaction, si bien que la colonne créée plus haut
+-- disparaissait aussi. Autant s'arrêter tout de suite, en le disant.
+do $garde$
+begin
+  if to_regprocedure('public.is_pro_active(uuid)') is null then
+    raise exception
+      'La migration 0012 doit être appliquée avant celle-ci (fonction is_pro_active absente).';
+  end if;
+end;
+$garde$;
+
 -- ============================================================
 -- 1. Ce qu'on voit d'une boutique redescendue en gratuit
 -- ============================================================
