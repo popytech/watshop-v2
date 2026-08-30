@@ -11,9 +11,11 @@
  */
 export const SOCIAL_LINKS = [
   { id: "whatsapp", label: "WhatsApp", href: "https://wa.me/224612960453" },
-  { id: "facebook", label: "Facebook", href: "" },
-  { id: "instagram", label: "Instagram", href: "" },
-  { id: "tiktok", label: "TikTok", href: "" },
+  { id: "facebook", label: "Facebook", href: "https://www.facebook.com/watshopafrica" },
+  // Instagram et TikTok portent l'identifiant @watshop, là où Facebook a
+  // « watshopafrica » : les deux nous ont été donnés tels quels.
+  { id: "instagram", label: "Instagram", href: "https://www.instagram.com/watshop" },
+  { id: "tiktok", label: "TikTok", href: "https://www.tiktok.com/@watshop" },
 ] as const;
 
 /**

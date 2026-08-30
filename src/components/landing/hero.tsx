@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Glow } from "@/components/landing/glow";
 import { HeroShowcase } from "@/components/landing/hero-showcase";
@@ -22,23 +21,20 @@ export function Hero({ connecte }: { connecte: boolean }) {
     <section className="fade-bottom relative overflow-hidden px-4 pb-0">
       <div className="mx-auto flex max-w-6xl flex-col gap-12 pt-12 sm:gap-20 sm:pt-20">
         <div className="flex flex-col items-center gap-6 text-center">
-          <Badge variant="outline" className="animate-appear opacity-0">
-            <MessageCircle className="size-3" />
-            Vendre là où vos clients sont déjà
-          </Badge>
-
-          <h1 className="animate-appear relative z-10 inline-block bg-linear-to-r from-foreground to-foreground bg-clip-text text-4xl leading-tight font-semibold text-balance text-transparent drop-shadow-2xl opacity-0 [animation-delay:100ms] sm:text-6xl sm:leading-tight md:text-7xl md:leading-tight dark:to-muted-foreground">
+          {/* Le titre ouvre la page : les délais d'apparition remontent tous
+              d'un cran depuis le retrait de la pastille qui le précédait. */}
+          <h1 className="animate-appear relative z-10 inline-block bg-linear-to-r from-foreground to-foreground bg-clip-text text-4xl leading-tight font-semibold text-balance text-transparent drop-shadow-2xl opacity-0 sm:text-6xl sm:leading-tight md:text-7xl md:leading-tight dark:to-muted-foreground">
             Transformez vos abonnés
             <br />
             en clients.
           </h1>
 
-          <p className="animate-appear max-w-xl text-pretty text-muted-foreground opacity-0 [animation-delay:200ms] sm:text-lg">
+          <p className="animate-appear max-w-xl text-pretty text-muted-foreground opacity-0 [animation-delay:100ms] sm:text-lg">
             Créez votre boutique en ligne, partagez vos produits sur WhatsApp et commencez à
             vendre. Sans site à construire, sans commission sur vos ventes.
           </p>
 
-          <div className="animate-appear flex flex-col gap-3 opacity-0 [animation-delay:300ms] sm:flex-row">
+          <div className="animate-appear flex flex-col gap-3 opacity-0 [animation-delay:200ms] sm:flex-row">
             <Button asChild size="lg" className="h-12 px-6 text-base">
               <Link href={connecte ? "/dashboard" : "/register"}>
                 {connecte ? "Ouvrir mon espace" : "Créer ma boutique gratuitement"}
@@ -52,7 +48,7 @@ export function Hero({ connecte }: { connecte: boolean }) {
             )}
           </div>
 
-          <ul className="animate-appear flex items-center gap-6 pt-2 text-muted-foreground opacity-0 [animation-delay:400ms]">
+          <ul className="animate-appear flex items-center gap-6 pt-2 text-muted-foreground opacity-0 [animation-delay:300ms]">
             <li className="flex flex-col items-center gap-1.5">
               <MessageCircle className="size-5" />
               <span className="text-xs">WhatsApp</span>

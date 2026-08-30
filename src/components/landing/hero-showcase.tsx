@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Eye, MessageCircle, ShoppingCart, Wallet } from "lucide-react";
 
 import { BrowserScreen, PhoneScreen } from "@/components/landing/device";
@@ -23,8 +24,10 @@ const CHIFFRES = [
   { label: "WhatsApp", valeur: "8", icone: MessageCircle },
 ];
 
+// La première commande porte l'article affiché sur le téléphone, au même prix :
+// les deux écrans racontent alors la même vente, vue du vendeur et du client.
 const COMMANDES = [
-  { ref: "#WA-00821", produit: "Robe wax", montant: 350_000, etat: "Nouveau" },
+  { ref: "#WA-00821", produit: "Pagne wax imprimé", montant: 280_000, etat: "Nouveau" },
   { ref: "#WS-00819", produit: "Sac raphia", montant: 180_000, etat: "Confirmée" },
 ];
 
@@ -82,25 +85,60 @@ function Boutique() {
     <div className="flex size-full flex-col bg-background text-left">
       {/* Marge haute : laisse passer l'île dynamique dessinée par le cadre. */}
       <div className="flex items-center gap-[3%] border-b px-[6%] pt-[11%] pb-[4%]">
-        <span className="size-[10cqw] rounded-lg bg-brand" />
-        <span className="text-[5cqw] font-semibold">Fatima Fashion</span>
+        <span className="flex size-[10cqw] items-center justify-center rounded-lg bg-brand text-[5cqw] font-bold text-white">
+          F
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[4.6cqw] font-semibold">Fatima Fashion</p>
+          <p className="text-[3.2cqw] text-muted-foreground">Mode femme · Conakry</p>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-[4%] p-[6%]">
-        <div className="flex aspect-square items-center justify-center rounded-xl bg-linear-to-br from-brand/15 to-brand/5">
-          <span className="text-[26cqw]">👗</span>
+      <div className="flex flex-col gap-[3.5%] p-[5%]">
+        {/* Une vraie photo, et non plus un emoji : c'est la vitrine d'un
+            commerçant qu'on montre, pas un pictogramme. Fichier local plutôt
+            qu'un produit tiré de la base — le hero est le premier écran, il ne
+            doit attendre aucune requête. */}
+        <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
+          <Image
+            src="/apercu-produit.jpg"
+            alt="Pagne wax imprimé"
+            fill
+            sizes="240px"
+            className="object-cover"
+          />
+          <span className="absolute top-[4%] left-[4%] rounded-md bg-primary px-[4%] py-[1.5%] text-[3.2cqw] font-medium text-primary-foreground">
+            Promo
+          </span>
         </div>
 
         <div>
-          <p className="text-[5cqw] font-medium">Robe wax</p>
-          <p className="text-[7cqw] font-semibold">{formatMoney(350_000)}</p>
-          <p className="text-[4cqw] text-muted-foreground">12 disponibles</p>
+          <p className="text-[4.6cqw] font-medium">Pagne wax imprimé</p>
+          <p className="flex items-baseline gap-[2%]">
+            <span className="text-[6.4cqw] font-semibold">{formatMoney(280_000)}</span>
+            <span className="text-[3.6cqw] text-muted-foreground line-through">
+              {formatMoney(350_000)}
+            </span>
+          </p>
+          <p className="text-[3.4cqw] text-muted-foreground">12 disponibles</p>
         </div>
 
-        <span className="flex h-[8%] items-center justify-center rounded-lg bg-primary text-[4.2cqw] font-medium text-primary-foreground">
+        {/* Les tailles, comme sur la vraie fiche produit. */}
+        <div className="flex gap-[2%]">
+          {["S", "M", "L", "XL"].map((taille) => (
+            <span
+              key={taille}
+              className="rounded border px-[3%] py-[1%] text-[3.2cqw] text-muted-foreground"
+            >
+              {taille}
+            </span>
+          ))}
+        </div>
+
+        <span className="flex h-[7.5%] items-center justify-center rounded-lg bg-primary text-[3.9cqw] font-medium text-primary-foreground">
           Commander sur WhatsApp
         </span>
-        <span className="flex h-[8%] items-center justify-center rounded-lg border text-[4.2cqw] font-medium">
+        <span className="flex h-[7.5%] items-center justify-center rounded-lg border text-[3.9cqw] font-medium">
           Ajouter au panier
         </span>
       </div>
