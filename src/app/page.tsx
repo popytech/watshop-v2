@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LayoutLines } from "@/components/landing/layout-lines";
 import { Hero } from "@/components/landing/hero";
 import { Steps } from "@/components/landing/steps";
+import { Products } from "@/components/landing/products";
 import { Shops } from "@/components/landing/shops";
 import { Pricing } from "@/components/landing/pricing";
 import { Faq } from "@/components/landing/faq";
@@ -48,6 +50,15 @@ export default async function Home() {
 
         <div id="fonctionnement">
           <Steps />
+        </div>
+
+        {/* Les produits avant les boutiques : on vient chercher un article, pas
+            un commerçant. Suspendu parce que ce bandeau est, seul de la page, à
+            interroger la base — le reste s'affiche sans l'attendre. */}
+        <div id="produits">
+          <Suspense fallback={null}>
+            <Products />
+          </Suspense>
         </div>
 
         <div id="boutiques">

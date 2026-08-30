@@ -170,6 +170,26 @@ export function productCount(shop: MarketplaceShop): number {
   return shop.products?.[0]?.count ?? 0;
 }
 
+/**
+ * Quelques produits pour le bandeau de la page d'accueil.
+ *
+ * Les mis en avant d'abord, les plus récents ensuite — le même ordre que le
+ * marketplace, pour qu'un vendeur mis en avant le soit partout.
+ */
+export async function getLandingProducts(limite = 12): Promise<MarketplaceProduct[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(SELECT_PRODUITS)
+    .order("is_sponsored", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limite);
+
+  if (error) throw error;
+  return (data ?? []) as unknown as MarketplaceProduct[];
+}
+
 export type CategoryTile = {
   /** Libellé exact, tel qu'il est stocké dans `shops.category`. */
   nom: string;

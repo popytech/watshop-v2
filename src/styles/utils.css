@@ -20,6 +20,16 @@
   @apply border border-border border-b-input/90 bg-linear-to-b from-card/60 to-card/20 dark:border-border/10 dark:border-t-border/30 dark:border-b-0 dark:from-primary/10 dark:to-primary/5;
 }
 
+/* Un défilement au doigt n'a pas besoin d'une barre : elle mangerait le bas de
+   l'image sans rien apprendre là où on fait glisser. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Masques de fondu : servent à faire disparaître un défilement sur les bords
    plutôt que de le couper net. */
 @utility fade-x {

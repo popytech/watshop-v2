@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ImageOff } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PhotoStrip } from "@/components/media/photo-strip";
 import { AddToCart } from "@/components/storefront/add-to-cart";
 import { SharePanel } from "@/components/shop/share-panel";
 import { VisitTracker } from "@/components/storefront/visit-tracker";
@@ -102,36 +103,39 @@ export default async function ProductPage({ params, searchParams }: Props) {
         </Button>
 
         <div className="grid gap-6 md:grid-cols-2">
+          {/* Galerie.
+              La grande image se fait glisser au doigt, et les vignettes sont de
+              vrais liens vers l'ancre de chaque photo : cliquer l'une d'elles
+              fait défiler la bande jusqu'à la bonne. Auparavant les vignettes
+              n'étaient que décoratives — sur un téléphone, les photos 2 à 4
+              n'étaient visibles qu'en 80 pixels, ce qui ne permet de juger de
+              rien. Tout tient en HTML et en CSS, sans JavaScript. */}
           <div className="flex flex-col gap-2">
-            <span className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
-              {images[0] ? (
-                <Image
-                  src={images[0].url}
-                  alt={images[0].alt_text || product.name}
-                  fill
-                  sizes="(min-width: 768px) 50vw, 100vw"
-                  className="object-cover"
-                  priority
-                />
-              ) : (
-                <ImageOff className="size-6 text-muted-foreground" />
-              )}
-            </span>
+            <PhotoStrip
+              photos={images}
+              alt={product.name}
+              sizes="(min-width: 768px) 50vw, 100vw"
+              priority
+              ancre="photo"
+              className="overflow-hidden rounded-xl bg-muted"
+            />
 
             {images.length > 1 ? (
-              <ul className="flex gap-2 overflow-x-auto pb-1">
-                {images.slice(1).map((image) => (
-                  <li
-                    key={image.url}
-                    className="size-20 shrink-0 overflow-hidden rounded-lg bg-muted"
-                  >
-                    <Image
-                      src={image.url}
-                      alt={image.alt_text || product.name}
-                      width={80}
-                      height={80}
-                      className="size-full object-cover"
-                    />
+              <ul className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+                {images.map((image, index) => (
+                  <li key={image.url}>
+                    <a
+                      href={`#photo-${index}`}
+                      className="block size-20 shrink-0 overflow-hidden rounded-lg bg-muted ring-offset-background transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                    >
+                      <Image
+                        src={image.url}
+                        alt={`${product.name} — photo ${index + 1}`}
+                        width={80}
+                        height={80}
+                        className="size-full object-cover"
+                      />
+                    </a>
                   </li>
                 ))}
               </ul>

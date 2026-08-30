@@ -62,9 +62,23 @@ export function LandingFooter() {
           </div>
         </div>
 
-        <p className="border-t pt-6 text-xs text-muted-foreground">
-          Watshop — Conakry, Guinée. Aucune commission sur vos ventes.
-        </p>
+        <div className="flex flex-col gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p>Watshop — Conakry, Guinée. Aucune commission sur vos ventes.</p>
+
+          {/* Lien sortant : `noreferrer` couvre aussi l'ancienne faille de
+              `target="_blank"`, où la page ouverte pouvait manipuler la nôtre. */}
+          <p>
+            Développé par{" "}
+            <a
+              href="https://gnakry.dev"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              GNAKRY DEV
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );

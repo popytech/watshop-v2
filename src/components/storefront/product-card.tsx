@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ImageOff } from "lucide-react";
+import { Images } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { PhotoStrip } from "@/components/media/photo-strip";
 import { formatMoney } from "@/lib/format";
 import { effectivePrice, sortedImages, type PublicProduct } from "@/lib/shop/public";
 
@@ -15,7 +15,7 @@ export function ProductCard({
   shopSlug: string;
   currency: string;
 }) {
-  const cover = sortedImages(product)[0];
+  const photos = sortedImages(product);
   const prix = effectivePrice(product);
   const enPromo = prix < product.price;
   const rupture = product.quantity <= 0;
@@ -26,18 +26,10 @@ export function ProductCard({
         href={`/${shopSlug}/produit/${product.slug}`}
         className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary/40"
       >
-        <span className="relative flex aspect-square items-center justify-center bg-muted">
-          {cover ? (
-            <Image
-              src={cover.url}
-              alt={cover.alt_text || product.name}
-              fill
-              sizes="(min-width: 768px) 25vw, 50vw"
-              className="object-cover transition-transform group-hover:scale-[1.02]"
-            />
-          ) : (
-            <ImageOff className="size-5 text-muted-foreground" />
-          )}
+        {/* Les photos se font glisser au doigt : le survol, qui les révélait
+            ailleurs, n'existe pas sur un téléphone. */}
+        <span className="relative block bg-muted">
+          <PhotoStrip photos={photos} alt={product.name} sizes="(min-width: 768px) 25vw, 50vw" />
 
           {enPromo ? (
             <Badge className="absolute top-2 left-2">Promo</Badge>
@@ -46,6 +38,12 @@ export function ProductCard({
             <Badge variant="secondary" className="absolute top-2 right-2">
               Rupture
             </Badge>
+          ) : null}
+          {photos.length > 1 ? (
+            <span className="absolute right-2 bottom-2 flex items-center gap-1 rounded-full bg-background/80 px-2 py-0.5 text-xs backdrop-blur">
+              <Images className="size-3" />
+              <span className="tabular-nums">{photos.length}</span>
+            </span>
           ) : null}
         </span>
 

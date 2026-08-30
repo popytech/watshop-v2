@@ -1,24 +1,26 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, Store } from "lucide-react";
+import { Images, Store } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { PhotoStrip } from "@/components/media/photo-strip";
 import { formatMoney } from "@/lib/format";
 import { effectivePrice } from "@/lib/shop/public";
 import type { MarketplaceProduct } from "@/lib/marketplace/queries";
 
+const TAILLES_IMAGE = "(min-width: 1024px) 33vw, 50vw";
+
 /**
  * Carte produit du marketplace, dans la composition de Your Next Store (MIT) :
- * visuel carré aux coins arrondis, texte posé dessous sans encadrement. Une
+ * visuel carré aux coins arrondis, texte centré dessous, sans encadrement. Une
  * grille de vitrine, pas une grille de tableau de bord.
  *
- * Deux ajouts propres à Watshop :
- *   - la deuxième photo apparaît au survol, quand le vendeur en a mis une ;
- *   - le nom de la boutique, parce qu'ici l'acheteur navigue entre des vendeurs
- *     et doit savoir chez qui il achète avant de cliquer.
+ * Le nom de la boutique y figure parce qu'ici l'acheteur navigue entre des
+ * vendeurs et doit savoir chez qui il achète avant de cliquer. Le lien mène à la
+ * fiche produit dans la boutique du vendeur, pas à une fiche du marketplace :
+ * c'est là qu'est le panier.
  *
- * Le lien mène à la fiche produit dans la boutique du vendeur, pas à une fiche
- * du marketplace : c'est là qu'est le panier.
+ * Les photos se font glisser au doigt plutôt que d'apparaître au survol. Le
+ * survol n'existe pas sur un téléphone, et c'est là que sont nos acheteurs.
  */
 export function MarketplaceProductCard({
   product,
@@ -28,9 +30,7 @@ export function MarketplaceProductCard({
   /** Vrai pour la première carte : son image est le plus grand élément visible. */
   priority?: boolean;
 }) {
-  const images = [...(product.product_images ?? [])].sort((a, b) => a.position - b.position);
-  const principale = images[0];
-  const secondaire = images[1];
+  const photos = [...(product.product_images ?? [])].sort((a, b) => a.position - b.position);
 
   // Recalculé plutôt que lu dans `effective_price` : la colonne générée sert au
   // tri, qui se fait en SQL ; l'affichage passe par le même helper que la
@@ -39,39 +39,17 @@ export function MarketplaceProductCard({
   const enPromo = prix < product.price;
   const rupture = product.quantity <= 0;
   const devise = product.shops.currency_symbol;
-  const tailles = (product.sizes ?? []).filter(Boolean);
 
   return (
     <li>
       <Link href={`/${product.shops.slug}/produit/${product.slug}`} className="group block">
-        <div className="relative mb-3 aspect-square overflow-hidden rounded-2xl bg-secondary">
-          {principale ? (
-            <>
-              <Image
-                src={principale.url}
-                alt={principale.alt_text || product.name}
-                fill
-                sizes="(min-width: 1280px) 25vw, (min-width: 640px) 33vw, 50vw"
-                priority={priority}
-                className={`object-cover transition-opacity duration-500 ${
-                  secondaire ? "group-hover:opacity-0" : ""
-                }`}
-              />
-              {secondaire ? (
-                <Image
-                  src={secondaire.url}
-                  alt=""
-                  fill
-                  sizes="(min-width: 1280px) 25vw, (min-width: 640px) 33vw, 50vw"
-                  className="object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                />
-              ) : null}
-            </>
-          ) : (
-            <span className="flex size-full items-center justify-center">
-              <ImageOff className="size-5 text-muted-foreground" />
-            </span>
-          )}
+        <div className="relative mb-3 overflow-hidden rounded-2xl bg-secondary">
+          <PhotoStrip
+            photos={photos}
+            alt={product.name}
+            sizes={TAILLES_IMAGE}
+            priority={priority}
+          />
 
           {enPromo ? <Badge className="absolute top-2 left-2">Promo</Badge> : null}
           {rupture ? (
@@ -79,33 +57,20 @@ export function MarketplaceProductCard({
               Rupture
             </Badge>
           ) : null}
+
+          {/* Un compte, pas un indicateur de position : il reste juste où qu'on
+              en soit dans la bande, là où des points exigeraient de suivre le
+              défilement — donc du JavaScript sur chacune des vingt-quatre
+              cartes. Il dit ce qui manquait : il y a d'autres photos. */}
+          {photos.length > 1 ? (
+            <span className="absolute right-2 bottom-2 flex items-center gap-1 rounded-full bg-background/80 px-2 py-0.5 text-xs backdrop-blur">
+              <Images className="size-3" />
+              <span className="tabular-nums">{photos.length}</span>
+            </span>
+          ) : null}
         </div>
 
-        {/* Texte centré sous le visuel, comme chez YNS : la grille se lit comme
-            une vitrine, pas comme un tableau. */}
         <div className="space-y-1 text-center">
-          {/* À la place des pastilles de couleur de YNS, qui reposent sur leurs
-              variantes : nous n'avons pas de couleurs en base, mais des tailles,
-              saisies en texte libre par le vendeur. Trois au plus, pour ne pas
-              qu'une saisie bavarde déséquilibre la grille. */}
-          {tailles.length > 0 ? (
-            <ul className="flex flex-wrap justify-center gap-1">
-              {tailles.slice(0, 3).map((taille) => (
-                <li
-                  key={taille}
-                  className="rounded border px-1.5 py-0.5 text-[0.65rem] leading-none text-muted-foreground"
-                >
-                  {taille}
-                </li>
-              ))}
-              {tailles.length > 3 ? (
-                <li className="px-1 text-[0.65rem] leading-none text-muted-foreground">
-                  +{tailles.length - 3}
-                </li>
-              ) : null}
-            </ul>
-          ) : null}
-
           <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
 
           <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
