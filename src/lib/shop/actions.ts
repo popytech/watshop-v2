@@ -491,6 +491,17 @@ export async function updateShopSettings(_prev: FormState, formData: FormData): 
     patch.logo_url = upload.url;
   }
 
+  const banniere = formData.get("cover");
+  if (banniere instanceof File && banniere.size > 0) {
+    const upload = await uploadImage(banniere, {
+      userId: session.userId,
+      shopId: shop.id,
+      folder: "banniere",
+    });
+    if (!upload.ok) return { errors: { cover: upload.reason } };
+    patch.cover_url = upload.url;
+  }
+
   const { error } = await supabase.from("shops").update(patch).eq("id", shop.id);
 
   if (error) {

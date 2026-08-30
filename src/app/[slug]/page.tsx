@@ -6,7 +6,12 @@ import { ProductCard } from "@/components/storefront/product-card";
 import { ShopHero } from "@/components/storefront/shop-hero";
 import { SharePanel } from "@/components/shop/share-panel";
 import { VisitTracker } from "@/components/storefront/visit-tracker";
-import { getDeliveryZones, getPublicProducts, getPublicShop } from "@/lib/shop/public";
+import {
+  getDeliveryZones,
+  getPublicProducts,
+  getPublicShop,
+  sortedImages,
+} from "@/lib/shop/public";
 import { getSiteUrl } from "@/lib/site-url";
 import { shopPath } from "@/lib/tenant";
 
@@ -75,7 +80,12 @@ export default async function ShopPage({ params }: Props) {
             Pas de bouton de contact — joindre le vendeur passe par une
             commande, sinon la vente se conclut hors de Watshop et personne n'en
             garde la trace. */}
-        <ShopHero shop={shop} produits={products.length} zones={zones.length} />
+        <ShopHero
+          shop={shop}
+          produits={products.length}
+          zones={zones.length}
+          photoDeSecours={sortedImages(products[0] ?? { product_images: [] })[0]?.url}
+        />
 
         {products.length > 0 ? (
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">

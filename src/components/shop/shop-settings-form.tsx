@@ -33,6 +33,7 @@ type Props = {
     phone: string;
     mobileMoney: string;
     logoUrl: string | null;
+    coverUrl: string | null;
   };
   siteUrl: string;
 };
@@ -42,6 +43,7 @@ export function ShopSettingsForm({ defaultValues, siteUrl }: Props) {
   const [slug, setSlug] = useState(defaultValues.slug);
   const [color, setColor] = useState(defaultValues.primaryColor);
   const [countryCode, setCountryCode] = useState(defaultValues.countryCode);
+  const [apercuBanniere, setApercuBanniere] = useState(defaultValues.coverUrl);
   const [preview, setPreview] = useState<string | null>(defaultValues.logoUrl);
 
   const country = getCountry(countryCode);
@@ -149,6 +151,39 @@ export function ShopSettingsForm({ defaultValues, siteUrl }: Props) {
             />
           </div>
           <FieldError>{state.errors?.logo}</FieldError>
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="cover">Bannière (facultatif)</FieldLabel>
+          {/* Large plutôt que carrée : c'est le fond du bandeau de la vitrine,
+              là où le visiteur arrive. Sans elle, le bandeau retombe sur la
+              première photo du catalogue, puis sur votre couleur seule. */}
+          <div className="flex flex-col gap-3">
+            <span className="relative flex h-24 w-full items-center justify-center overflow-hidden rounded-xl border bg-muted">
+              {apercuBanniere ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={apercuBanniere} alt="Aperçu de la bannière" className="size-full object-cover" />
+              ) : (
+                <ImagePlus className="size-5 text-muted-foreground" />
+              )}
+            </span>
+            <Input
+              id="cover"
+              name="cover"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              className="h-11 py-2"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                setApercuBanniere(file ? URL.createObjectURL(file) : defaultValues.coverUrl);
+              }}
+              aria-invalid={Boolean(state.errors?.cover)}
+            />
+          </div>
+          <FieldDescription>
+            Une photo large de votre atelier, de votre étal ou d&apos;une pièce phare.
+          </FieldDescription>
+          <FieldError>{state.errors?.cover}</FieldError>
         </Field>
 
         <Field>

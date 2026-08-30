@@ -81,6 +81,10 @@ create table public.shops (
   country_code text not null default 'GN',
   currency_symbol text not null default 'GNF',
   logo_url text,
+  -- Bannière large du bandeau de vitrine. Facultative : sans elle, le
+  -- bandeau retombe sur la première photo du catalogue, puis sur la
+  -- couleur seule.
+  cover_url text,
   primary_color text not null default '#128c4a',
   category text,
   -- Étape suivante à compléter (2 = boutique … 6 = publication).

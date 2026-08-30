@@ -31,7 +31,7 @@ function extensionFor(type: string): string {
  */
 export async function uploadImage(
   file: File,
-  params: { userId: string; shopId: string; folder: "logo" | "produits" },
+  params: { userId: string; shopId: string; folder: "logo" | "banniere" | "produits" },
 ): Promise<UploadResult> {
   if (file.size === 0) return { ok: false, reason: "Fichier vide." };
   if (file.size > MAX_BYTES) {

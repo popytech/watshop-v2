@@ -31,7 +31,7 @@ export async function generateMetadata({
   return {
     title,
     description:
-      "Découvrez les boutiques des commerçants de Guinée et d'Afrique de l'Ouest : mode, beauté, alimentation, électronique. Commandez directement sur WhatsApp.",
+      "Découvrez les boutiques des commerçants d'Afrique de l'Ouest : mode, beauté, alimentation, électronique. Commandez directement sur WhatsApp.",
     alternates: { canonical },
     openGraph: {
       type: "website",

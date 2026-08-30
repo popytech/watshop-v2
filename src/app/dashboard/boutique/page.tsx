@@ -93,6 +93,7 @@ export default async function ShopSettingsPage() {
               phone: shop.whatsapp_number ?? "",
               mobileMoney: shop.mobile_money_number ?? "",
               logoUrl: shop.logo_url,
+              coverUrl: shop.cover_url,
             }}
           />
         </CardContent>

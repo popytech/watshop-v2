@@ -26,11 +26,19 @@ export function ShopHero({
   shop,
   produits,
   zones,
+  photoDeSecours,
 }: {
   shop: Shop;
   produits: number;
   zones: number;
+  /**
+   * Première photo du catalogue, utilisée faute de bannière. Un vendeur qui
+   * vient d'ouvrir a déjà des produits en photo bien avant d'avoir pensé à
+   * soigner sa devanture.
+   */
+  photoDeSecours?: string | null;
 }) {
+  const fond = shop.cover_url ?? photoDeSecours ?? null;
   const pays = COUNTRIES.find((p) => p.code === shop.country_code)?.name;
 
   const depuis = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(
@@ -57,12 +65,32 @@ export function ShopHero({
 
   return (
     <section className="relative overflow-hidden rounded-2xl border bg-primary/5">
-      {/* Halo décoratif, tiré lui aussi de la couleur du vendeur. Il déborde du
-          cadre, d'où l'overflow-hidden au-dessus. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full bg-primary/10 blur-3xl"
-      />
+      {fond ? (
+        <>
+          {/* La photo occupe tout le bandeau ; un voile la recouvre pour que le
+              texte reste lisible quelle que soit l'image envoyée — on ne
+              contrôle ni son cadrage ni sa luminosité. Le dégradé part du bas,
+              là où sont les repères en petits caractères. */}
+          <Image
+            src={fond}
+            alt=""
+            fill
+            sizes="(min-width: 768px) 896px, 100vw"
+            priority
+            className="object-cover"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-linear-to-t from-background via-background/90 to-background/60"
+          />
+        </>
+      ) : (
+        // Sans photo : le halo décoratif seul, tiré de la couleur du vendeur.
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full bg-primary/10 blur-3xl"
+        />
+      )}
 
       <div className="relative flex flex-col gap-4 p-5 sm:p-7">
         <div className="flex items-start gap-4">

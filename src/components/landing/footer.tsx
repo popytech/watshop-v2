@@ -5,7 +5,13 @@ import { Logo } from "@/components/brand/logo";
 import { FacebookIcon, InstagramIcon, TiktokIcon } from "@/components/brand/social-icons";
 import { NewsletterForm } from "@/components/landing/newsletter-form";
 import { PAYMENT_METHODS, SOCIAL_LINKS } from "@/lib/site-links";
+import { COUNTRIES } from "@/lib/phone";
 import { cn } from "@/lib/utils";
+
+// Les pays où Watshop fonctionne, tirés de la liste qui sert aussi aux
+// sélecteurs de formulaire. Une seule source : la page ne peut pas annoncer un
+// pays dont on ne saurait pas valider les numéros.
+const PAYS_SERVIS = COUNTRIES.map((p) => p.name).join(", ");
 
 // Une icône par identifiant de SOCIAL_LINKS.
 const ICONES = {
@@ -57,7 +63,8 @@ export function LandingFooter() {
           <div className="flex min-w-0 flex-col gap-4 lg:col-span-4">
             <Logo />
             <p className="max-w-xs text-sm text-muted-foreground">
-              La boutique en ligne des commerçants africains, pensée pour WhatsApp.
+              La boutique en ligne des commerçants d&apos;Afrique de l&apos;Ouest, pensée pour
+              WhatsApp.
             </p>
 
             {/* Seuls les comptes réellement ouverts sont rendus : une icône qui
@@ -130,7 +137,12 @@ export function LandingFooter() {
         </div>
 
         <div className="flex flex-col gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>Watshop — Conakry, Guinée. Aucune commission sur vos ventes.</p>
+          {/* Les pays sont lus dans COUNTRIES, la même liste que le sélecteur
+              des formulaires : la page ne peut pas annoncer un pays où l'on ne
+              saurait pas valider un numéro de téléphone. */}
+          <p>
+            Watshop — {PAYS_SERVIS}. Aucune commission sur vos ventes.
+          </p>
 
           {/* Lien sortant : `noreferrer` couvre aussi l'ancienne faille de
               `target="_blank"`, où la page ouverte pouvait manipuler la nôtre. */}

@@ -48,6 +48,8 @@ type Shop = {
   country_code: string;
   currency_symbol: string;
   logo_url: string | null;
+  /** Bannière large du bandeau de vitrine. Facultative. Voir migration 0016. */
+  cover_url: string | null;
   primary_color: string;
   category: string | null;
   onboarding_step: number;
