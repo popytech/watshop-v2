@@ -3,10 +3,7 @@
 import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-
-export type NewsletterState = { message: string | null; ok: boolean };
-
-export const initialNewsletterState: NewsletterState = { message: null, ok: false };
+import type { NewsletterState } from "@/lib/newsletter/state";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email("Adresse e-mail invalide."),

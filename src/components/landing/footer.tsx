@@ -47,8 +47,14 @@ export function LandingFooter() {
   return (
     <footer className="border-t">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12">
-        <div className="flex flex-col gap-10 lg:flex-row lg:justify-between">
-          <div className="flex flex-col gap-4">
+        {/* Une grille, pas trois blocs en ligne.
+            En `flex-row justify-between`, la colonne de l'infolettre se faisait
+            écraser par les deux autres : son bouton étant `shrink-0`, c'est le
+            champ e-mail qui rétrécissait, jusqu'à devenir inutilisable. Des
+            colonnes de largeur déclarée ne peuvent pas se voler la place, et
+            `min-w-0` empêche un mot long de pousser la sienne. */}
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-12">
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-4">
             <Logo />
             <p className="max-w-xs text-sm text-muted-foreground">
               La boutique en ligne des commerçants africains, pensée pour WhatsApp.
@@ -100,7 +106,7 @@ export function LandingFooter() {
 
           {/* Trois colonnes tiennent mal côte à côte sur 360 px : elles passent
               à la ligne plutôt que de se serrer. */}
-          <div className="flex flex-wrap gap-8 sm:gap-12">
+          <div className="flex min-w-0 flex-wrap gap-8 sm:gap-10 lg:col-span-5">
             {COLONNES.map((colonne) => (
               <div key={colonne.titre} className="flex flex-col gap-2">
                 <p className="text-sm font-medium">{colonne.titre}</p>
@@ -117,7 +123,7 @@ export function LandingFooter() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:col-span-3">
             <p className="text-sm font-medium">Rester au courant</p>
             <NewsletterForm />
           </div>
