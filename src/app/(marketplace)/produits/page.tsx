@@ -4,13 +4,14 @@ import { Suspense } from "react";
 
 import { CategoryTiles, CategoryTilesSkeleton } from "@/components/marketplace/category-tiles";
 import { FilterControls } from "@/components/marketplace/filters";
+import { MarketplaceHero } from "@/components/marketplace/marketplace-hero";
 import { FiltersMobile } from "@/components/marketplace/filters-mobile";
 import { ListingPagination } from "@/components/marketplace/listing-pagination";
 import { MarketplaceProductCard } from "@/components/marketplace/product-card";
 import { ProductGridSkeleton } from "@/components/marketplace/product-grid-skeleton";
 import { SortSelect } from "@/components/marketplace/sort";
 import { formatNumber } from "@/lib/format";
-import { countProducts, listProducts } from "@/lib/marketplace/queries";
+import { countProducts, getMarketplaceCounts, listProducts } from "@/lib/marketplace/queries";
 import { nombreDePages, parseParams, type MarketplaceParams } from "@/lib/marketplace/params";
 
 const CHEMIN = "/produits";
@@ -103,41 +104,44 @@ export default async function ProduitsPage({
   // première page — donc rien de plus sur le chemin courant.
   if (params.page > 1 && params.page > nombreDePages(await countProducts(params))) notFound();
 
+  const comptes = await getMarketplaceCounts();
+
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <div className="mb-8 flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Tous les produits</h1>
-        <p className="text-muted-foreground">
-          Le catalogue de toutes les boutiques. La commande se passe chez le vendeur, sur son
-          WhatsApp.
-        </p>
-      </div>
+    <>
+      <MarketplaceHero
+        params={params}
+        chemin={CHEMIN}
+        produits={comptes.produits}
+        boutiques={comptes.boutiques}
+      />
 
-      {/* Barre d'outils : filtres à gauche, tri à droite. Pas de colonne
-          latérale — elle prenait un quart de la largeur pour deux filtres, au
-          détriment des visuels. */}
-      <div className="mb-8 flex items-center justify-between gap-3">
-        <FiltersMobile actifs={actifs}>
-          <FilterControls params={params} chemin={CHEMIN} />
-        </FiltersMobile>
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        {/* Barre d'outils : filtres à gauche, tri à droite. Pas de colonne
+            latérale — elle prenait un quart de la largeur pour deux filtres, au
+            détriment des visuels. */}
+        <div className="mb-8 flex items-center justify-between gap-3">
+          <FiltersMobile actifs={actifs}>
+            <FilterControls params={params} chemin={CHEMIN} />
+          </FiltersMobile>
 
-        <SortSelect params={params} chemin={CHEMIN} />
-      </div>
-
-      <Suspense key={JSON.stringify(params)} fallback={<ProductGridSkeleton />}>
-        <ListeProduits params={params} />
-      </Suspense>
-
-      {/* Sous la grille, et seulement sur la première page sans filtre : une
-          fois qu'on a choisi une catégorie, la liste des catégories n'est plus
-          qu'un encombrement. */}
-      {sansFiltre ? (
-        <div className="mt-16">
-          <Suspense fallback={<CategoryTilesSkeleton />}>
-            <CategoryTiles />
-          </Suspense>
+          <SortSelect params={params} chemin={CHEMIN} />
         </div>
-      ) : null}
-    </div>
+
+        <Suspense key={JSON.stringify(params)} fallback={<ProductGridSkeleton />}>
+          <ListeProduits params={params} />
+        </Suspense>
+
+        {/* Sous la grille, et seulement sur la première page sans filtre : une
+            fois qu'on a choisi une catégorie, la liste des catégories n'est plus
+            qu'un encombrement. */}
+        {sansFiltre ? (
+          <div className="mt-16">
+            <Suspense fallback={<CategoryTilesSkeleton />}>
+              <CategoryTiles />
+            </Suspense>
+          </div>
+        ) : null}
+      </div>
+    </>
   );
 }

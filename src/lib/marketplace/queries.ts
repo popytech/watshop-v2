@@ -171,6 +171,24 @@ export function productCount(shop: MarketplaceShop): number {
 }
 
 /**
+ * Les deux chiffres du bandeau du marketplace.
+ *
+ * Aucune condition à écrire : la RLS ne laisse compter que les boutiques
+ * publiées et actives, et les produits actifs qui en dépendent. Le chiffre
+ * affiché est donc exactement ce que le visiteur peut voir.
+ */
+export async function getMarketplaceCounts(): Promise<{ produits: number; boutiques: number }> {
+  const supabase = await createClient();
+
+  const [produits, boutiques] = await Promise.all([
+    supabase.from("products").select("id", { count: "exact", head: true }),
+    supabase.from("shops").select("id", { count: "exact", head: true }),
+  ]);
+
+  return { produits: produits.count ?? 0, boutiques: boutiques.count ?? 0 };
+}
+
+/**
  * Quelques produits pour le bandeau de la page d'accueil.
  *
  * Les mis en avant d'abord, les plus récents ensuite — le même ordre que le

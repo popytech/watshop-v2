@@ -52,17 +52,18 @@ export default async function Home() {
           <Steps />
         </div>
 
-        {/* Les produits avant les boutiques : on vient chercher un article, pas
-            un commerçant. Suspendu parce que ce bandeau est, seul de la page, à
-            interroger la base — le reste s'affiche sans l'attendre. */}
+        <div id="boutiques">
+          <Shops />
+        </div>
+
+        {/* Juste avant les tarifs : la page montre d'abord ce qu'on peut
+            acheter, et demande ensuite de payer un abonnement. Suspendu parce
+            que ce bandeau est, seul de la page, à interroger la base — le reste
+            s'affiche sans l'attendre. */}
         <div id="produits">
           <Suspense fallback={null}>
             <Products />
           </Suspense>
-        </div>
-
-        <div id="boutiques">
-          <Shops />
         </div>
 
         <div id="tarifs">
