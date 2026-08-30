@@ -20,6 +20,8 @@ import {
 } from "@/lib/payment/providers";
 import { formatDate, formatMoney } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
+import { GnakryPayForm } from "@/components/dashboard/gnakrypay-form";
+import { estConfiguree, METHODES } from "@/lib/payment/gnakrypay/client";
 
 export const metadata = { title: "Abonnement — Watshop" };
 
@@ -104,6 +106,18 @@ export default async function SubscriptionPage() {
                 </li>
               ))}
             </ul>
+
+            {estConfiguree() ? (
+              <div className="flex flex-col gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                <p className="text-sm font-medium">Payer maintenant par GNAKRYPAY</p>
+                <GnakryPayForm
+                  montant={PRO_PRICE}
+                  devise={PRO_CURRENCY}
+                  paysParDefaut={shop.country_code}
+                  methodes={METHODES}
+                />
+              </div>
+            ) : null}
 
             {numeroWatshop ? (
               <div className="flex flex-col gap-4 rounded-lg border bg-muted/40 p-4">
