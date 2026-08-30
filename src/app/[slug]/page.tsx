@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { ProductCard } from "@/components/storefront/product-card";
+import { ShopHero } from "@/components/storefront/shop-hero";
 import { SharePanel } from "@/components/shop/share-panel";
 import { VisitTracker } from "@/components/storefront/visit-tracker";
-import { getPublicProducts, getPublicShop } from "@/lib/shop/public";
+import { getDeliveryZones, getPublicProducts, getPublicShop } from "@/lib/shop/public";
 import { getSiteUrl } from "@/lib/site-url";
 import { shopPath } from "@/lib/tenant";
 
@@ -40,7 +41,11 @@ export default async function ShopPage({ params }: Props) {
 
   if (!shop) notFound();
 
-  const [products, siteUrl] = await Promise.all([getPublicProducts(shop.id), getSiteUrl()]);
+  const [products, zones, siteUrl] = await Promise.all([
+    getPublicProducts(shop.id),
+    getDeliveryZones(shop.id),
+    getSiteUrl(),
+  ]);
   const shopUrl = `${siteUrl}${shopPath(shop.slug)}`;
 
   // Données structurées : c'est ce qui permet à la boutique d'apparaître
@@ -64,19 +69,13 @@ export default async function ShopPage({ params }: Props) {
       <VisitTracker shopId={shop.id} />
 
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{shop.name}</h1>
-          {shop.description ? (
-            <p className="text-sm text-muted-foreground">{shop.description}</p>
-          ) : null}
+        {/* Le bandeau porte le titre de la page : c'est lui qui dit au visiteur
+            arrivé d'un lien WhatsApp chez qui il est tombé.
 
-          {/* Le bouton « Contacter la boutique » a été retiré.
-              Il ouvrait WhatsApp sans qu'aucune commande n'existe : l'acheteur
-              et le vendeur se retrouvaient en tête-à-tête, et la vente se
-              concluait sans que Watshop n'en voie jamais la trace. On peut
-              toujours écrire au vendeur — depuis la page de confirmation, une
-              fois la commande passée. */}
-        </div>
+            Pas de bouton de contact — joindre le vendeur passe par une
+            commande, sinon la vente se conclut hors de Watshop et personne n'en
+            garde la trace. */}
+        <ShopHero shop={shop} produits={products.length} zones={zones.length} />
 
         {products.length > 0 ? (
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
