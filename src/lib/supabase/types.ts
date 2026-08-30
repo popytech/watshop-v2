@@ -255,6 +255,16 @@ type NewsletterSubscriber = {
   created_at: string;
 }
 
+type SubscriptionReminder = {
+  id: string;
+  user_id: string;
+  /** Palier atteint, en jours par rapport à l'échéance : -7, -3, -1, 0, +2. */
+  palier: number;
+  ends_at: string;
+  channels: string[];
+  sent_at: string;
+}
+
 // Forme attendue par supabase-js : sans Relationships (et sans Views/Functions
 // plus bas), l'inférence des colonnes dans .select("a, b") retombe sur never.
 //
@@ -287,6 +297,7 @@ export type Database = {
       agent_commission_payouts: TableDef<AgentCommissionPayout>;
       push_tokens: TableDef<PushToken>;
       newsletter_subscribers: TableDef<NewsletterSubscriber>;
+      subscription_reminders: TableDef<SubscriptionReminder>;
       shop_visits: TableDef<ShopVisit>;
       payments: TableDef<Payment>;
       agent_applications: TableDef<AgentApplication>;
@@ -303,6 +314,11 @@ export type Database = {
        * fonction sans avoir le droit de lire la table `subscriptions`, qui ne
        * regarde que son propriétaire.
        */
+      /** Ferme les abonnements dont la grâce est écoulée. Renvoie le nombre fermé. */
+      expire_subscriptions: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
       is_pro_active: {
         Args: { uid: string };
         Returns: boolean;
