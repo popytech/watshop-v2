@@ -13,11 +13,13 @@ import { ProductForm } from "@/components/shop/product-form";
 import { ProductListItem } from "@/components/shop/product-list-item";
 import { createProduct, finishProductsStep } from "@/lib/shop/actions";
 import { getProducts, requireShop } from "@/lib/shop/queries";
+import { getAccesPro } from "@/lib/payment/access";
 
 export const metadata = { title: "Vos produits — Watshop" };
 
 export default async function OnboardingProductsPage() {
   const shop = await requireShop();
+  const acces = await getAccesPro(shop.user_id);
   const products = await getProducts(shop.id);
 
   return (
@@ -61,6 +63,7 @@ export default async function OnboardingProductsPage() {
             action={createProduct}
             submitLabel="Ajouter le produit"
             currency={shop.currency_symbol}
+            pro={acces.actif}
           />
         </CardContent>
       </Card>

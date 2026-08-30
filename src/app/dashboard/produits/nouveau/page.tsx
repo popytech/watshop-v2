@@ -12,11 +12,13 @@ import {
 import { ProductForm } from "@/components/shop/product-form";
 import { createProduct } from "@/lib/shop/actions";
 import { requirePublishedShop } from "@/lib/shop/queries";
+import { getAccesPro } from "@/lib/payment/access";
 
 export const metadata = { title: "Nouveau produit — Watshop" };
 
 export default async function NewProductPage() {
   const shop = await requirePublishedShop();
+  const acces = await getAccesPro(shop.user_id);
 
   return (
     <div className="flex flex-col gap-5">
@@ -39,6 +41,7 @@ export default async function NewProductPage() {
             action={createProduct}
             submitLabel="Ajouter le produit"
             currency={shop.currency_symbol}
+            pro={acces.actif}
           />
         </CardContent>
       </Card>

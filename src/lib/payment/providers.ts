@@ -43,14 +43,20 @@ export const PLANS = [
     nom: "Pro",
     prix: 50_000,
     accroche: "Pour les boutiques qui vendent toutes les semaines.",
+    // Chaque ligne doit correspondre à quelque chose que le compte reçoit le
+    // jour du paiement. Ce n'était le cas d'aucune : la mise en avant n'était
+    // jamais activée, le programme revendeurs était ouvert à tous, et « support
+    // prioritaire » ne recouvrait aucun mécanisme. Vendre ce qu'on ne livre pas
+    // coûte plus cher que de ne pas vendre.
     inclus: [
       "Tout ce que contient l'offre gratuite",
-      "Boutique mise en avant dans les recherches",
+      "Boutique mise en avant dans le marketplace",
+      "Programme revendeurs : d'autres vendent pour vous",
+      "Votre boutique sans la mention Watshop",
+      "Support WhatsApp direct",
       "Statistiques détaillées",
-      "Programme revendeurs",
-      "Support prioritaire",
     ],
-    aVenir: [] as string[],
+    aVenir: ["Statistiques détaillées"] as string[],
   },
   {
     id: "business" as const,

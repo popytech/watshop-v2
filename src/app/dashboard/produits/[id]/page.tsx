@@ -15,6 +15,7 @@ import { ProductForm } from "@/components/shop/product-form";
 import { DeleteProductButton } from "@/components/shop/delete-product-button";
 import { toggleProduct, updateProduct } from "@/lib/shop/actions";
 import { getProduct, requirePublishedShop } from "@/lib/shop/queries";
+import { getAccesPro } from "@/lib/payment/access";
 
 export const metadata = { title: "Modifier un produit — Watshop" };
 
@@ -23,6 +24,7 @@ type Props = { params: Promise<{ id: string }> };
 export default async function EditProductPage({ params }: Props) {
   const { id } = await params;
   const shop = await requirePublishedShop();
+  const acces = await getAccesPro(shop.user_id);
   const product = await getProduct(shop.id, id);
 
   if (!product) notFound();
@@ -77,6 +79,7 @@ export default async function EditProductPage({ params }: Props) {
             productId={product.id}
             submitLabel="Enregistrer"
             currency={shop.currency_symbol}
+            pro={acces.actif}
             defaultValues={{
               name: product.name,
               price: String(product.price),

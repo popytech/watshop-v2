@@ -18,6 +18,7 @@ import {
 } from "@/lib/shop/schemas";
 import type { FormState } from "@/lib/shop/state";
 import type { Database } from "@/lib/supabase/types";
+import { getAccesPro } from "@/lib/payment/access";
 
 // Écritures du vendeur. Toutes passent par le client de l'utilisateur connecté :
 // la RLS refuse une écriture sur une boutique qui n'est pas la sienne, même si
@@ -183,6 +184,13 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
   const shop = await requireShop();
   const supabase = await createClient();
 
+  // Le programme revendeurs est une contrepartie de l'offre Pro. Le formulaire
+  // masque déjà le champ aux comptes gratuits, mais masquer n'empêche pas
+  // d'envoyer : c'est ici que la valeur est arrêtée.
+  const commissionAutorisee = (await getAccesPro(shop.user_id)).actif
+    ? parsed.data.resellerCommissionPct
+    : 0;
+
   // L'identifiant est tiré ici plutôt que par la base : il entre dans le slug,
   // qu'on veut poser dès l'insertion.
   const productId = crypto.randomUUID();
@@ -199,7 +207,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       promo_price: parsed.data.promoPrice,
       quantity: parsed.data.quantity,
       sizes: parsed.data.sizes,
-      reseller_commission_pct: parsed.data.resellerCommissionPct,
+      reseller_commission_pct: commissionAutorisee,
     })
     .select("id")
     .single();
@@ -246,6 +254,13 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
   const existing = await getProduct(shop.id, productId);
   if (!existing) return { message: "Produit introuvable." };
 
+  // Le programme revendeurs est une contrepartie de l'offre Pro. Le formulaire
+  // masque déjà le champ aux comptes gratuits, mais masquer n'empêche pas
+  // d'envoyer : c'est ici que la valeur est arrêtée.
+  const commissionAutorisee = (await getAccesPro(shop.user_id)).actif
+    ? parsed.data.resellerCommissionPct
+    : 0;
+
   const supabase = await createClient();
   // Le slug n'est volontairement pas recalculé : renommer un produit ne doit
   // pas invalider les liens déjà partagés.
@@ -258,7 +273,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
       promo_price: parsed.data.promoPrice,
       quantity: parsed.data.quantity,
       sizes: parsed.data.sizes,
-      reseller_commission_pct: parsed.data.resellerCommissionPct,
+      reseller_commission_pct: commissionAutorisee,
     })
     .eq("id", productId);
 

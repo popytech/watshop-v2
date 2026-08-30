@@ -295,6 +295,16 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      /**
+       * Dit si un compte est Pro à l'instant T, en lisant l'échéance de son
+       * abonnement. `security definer` : la boutique publique interroge cette
+       * fonction sans avoir le droit de lire la table `subscriptions`, qui ne
+       * regarde que son propriétaire.
+       */
+      is_pro_active: {
+        Args: { uid: string };
+        Returns: boolean;
+      };
     };
     Enums: {
       user_role: UserRole;

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { ImagePlus, Loader2 } from "lucide-react";
 
@@ -25,6 +26,8 @@ type Props = {
   productId?: string;
   submitLabel: string;
   currency: string;
+  /** Le programme revendeurs est une contrepartie de l'offre Pro. */
+  pro: boolean;
 };
 
 const MAX_IMAGES = 4;
@@ -35,6 +38,7 @@ export function ProductForm({
   productId,
   submitLabel,
   currency,
+  pro,
 }: Props) {
   const [state, formAction, pending] = useActionState(action, initialFormState);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -117,25 +121,46 @@ export function ProductForm({
           </Field>
         </div>
 
-        <Field>
-          <FieldLabel htmlFor="resellerCommissionPct">
-            Commission revendeur (facultatif)
-          </FieldLabel>
-          <Input
-            id="resellerCommissionPct"
-            name="resellerCommissionPct"
-            inputMode="numeric"
-            className="h-11 sm:max-w-32"
-            placeholder="0"
-            defaultValue={defaultValues.resellerCommissionPct ?? "0"}
-            aria-invalid={Boolean(state.errors?.resellerCommissionPct)}
-          />
-          <FieldDescription>
-            Pourcentage du prix reversé à un revendeur qui vous amène la vente. Laissez 0 pour ne
-            pas proposer ce produit aux revendeurs.
-          </FieldDescription>
-          <FieldError>{state.errors?.resellerCommissionPct}</FieldError>
-        </Field>
+        {/* Le programme revendeurs est annoncé comme une contrepartie de
+            l'offre Pro depuis le premier jour, et était pourtant ouvert à tous.
+            Le champ n'apparaît donc qu'aux comptes Pro — et le compte gratuit
+            voit à la place ce qu'il rate, avec le chemin pour y accéder.
+            La valeur est de toute façon revalidée côté serveur : masquer un
+            champ n'empêche personne de l'envoyer. */}
+        {pro ? (
+          <Field>
+            <FieldLabel htmlFor="resellerCommissionPct">
+              Commission revendeur (facultatif)
+            </FieldLabel>
+            <Input
+              id="resellerCommissionPct"
+              name="resellerCommissionPct"
+              inputMode="numeric"
+              className="h-11 sm:max-w-32"
+              placeholder="0"
+              defaultValue={defaultValues.resellerCommissionPct ?? "0"}
+              aria-invalid={Boolean(state.errors?.resellerCommissionPct)}
+            />
+            <FieldDescription>
+              Pourcentage du prix reversé à un revendeur qui vous amène la vente. Laissez 0 pour ne
+              pas proposer ce produit aux revendeurs.
+            </FieldDescription>
+            <FieldError>{state.errors?.resellerCommissionPct}</FieldError>
+          </Field>
+        ) : (
+          <Field>
+            <FieldLabel>Commission revendeur</FieldLabel>
+            <div className="flex flex-col gap-2 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Laissez d&apos;autres vendre vos produits et ne les payez qu&apos;à la vente.
+                Réservé à l&apos;offre Pro.
+              </p>
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <Link href="/dashboard/abonnement">Voir l&apos;offre Pro</Link>
+              </Button>
+            </div>
+          </Field>
+        )}
 
         <Field>
           <FieldLabel htmlFor="images">Photos</FieldLabel>

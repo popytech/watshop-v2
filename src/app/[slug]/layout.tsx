@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Store } from "lucide-react";
 
 import { CartButton } from "@/components/storefront/cart-button";
-import { getPublicShop } from "@/lib/shop/public";
+import { getPublicShop, isShopPro } from "@/lib/shop/public";
 
 type Props = { children: ReactNode; params: Promise<{ slug: string }> };
 
@@ -22,6 +22,10 @@ export default async function ShopLayout({ children, params }: Props) {
   const shop = await getPublicShop(slug);
 
   if (!shop) notFound();
+
+  // Une des contreparties de l'offre Pro : la boutique ne renvoie plus vers
+  // nous en bas de page. Le vendeur qui paie a une vitrine à lui.
+  const pro = await isShopPro(shop.user_id);
 
   return (
     <div
@@ -60,9 +64,15 @@ export default async function ShopLayout({ children, params }: Props) {
 
       <footer className="border-t">
         <div className="mx-auto w-full max-w-4xl px-4 py-5 text-center text-xs text-muted-foreground">
-          <Link href="/" className="hover:underline">
-            Boutique propulsée par Watshop
-          </Link>
+          {pro ? (
+            <span>
+              {shop.name} — {new Date().getFullYear()}
+            </span>
+          ) : (
+            <Link href="/" className="hover:underline">
+              Boutique propulsée par Watshop
+            </Link>
+          )}
         </div>
       </footer>
     </div>

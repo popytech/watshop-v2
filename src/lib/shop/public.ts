@@ -76,3 +76,17 @@ export async function getPublishedShops(): Promise<Pick<Shop, "slug" | "created_
 }
 
 export { effectivePrice, sortedImages } from "@/lib/shop/price";
+
+/**
+ * La boutique appartient-elle à un vendeur Pro ?
+ *
+ * Sert à retirer la mention « propulsée par Watshop » du pied de page, une des
+ * contreparties de l'offre. La question passe par une fonction `security
+ * definer` : un visiteur anonyme n'a aucun droit sur la table des abonnements,
+ * et ne doit pas en avoir — elle ne regarde que son propriétaire.
+ */
+export const isShopPro = cache(async (userId: string): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("is_pro_active", { uid: userId });
+  return data === true;
+});
