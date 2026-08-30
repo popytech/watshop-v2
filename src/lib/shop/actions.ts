@@ -19,12 +19,14 @@ import {
 import type { FormState } from "@/lib/shop/state";
 import type { Database } from "@/lib/supabase/types";
 import { getAccesPro } from "@/lib/payment/access";
+import { LIMITES_GRATUIT, PHOTOS_MAX_PRO } from "@/lib/payment/providers";
 
 // Écritures du vendeur. Toutes passent par le client de l'utilisateur connecté :
 // la RLS refuse une écriture sur une boutique qui n'est pas la sienne, même si
 // un identifiant était falsifié dans le formulaire.
 
-const MAX_IMAGES = 4;
+// Le plafond de photos dépend de la formule : il est passé en paramètre plutôt
+// que fixé ici, pour que la règle commerciale vive dans payment/providers.ts.
 
 /** Code Postgres d'une violation de contrainte d'unicité. */
 const UNIQUE_VIOLATION = "23505";
@@ -137,12 +139,14 @@ async function uploadProductImages(
     productId: string;
     productName: string;
     startPosition: number;
+    /** Plafond du compte : plus large en Pro, réduit sur l'offre gratuite. */
+    maxImages: number;
   },
 ): Promise<string | null> {
   const supabase = await createClient();
   let position = params.startPosition;
 
-  for (const file of files.slice(0, MAX_IMAGES)) {
+  for (const file of files.slice(0, params.maxImages)) {
     if (!(file instanceof File) || file.size === 0) continue;
 
     const upload = await uploadImage(file, {
@@ -184,12 +188,28 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
   const shop = await requireShop();
   const supabase = await createClient();
 
+  const pro = (await getAccesPro(shop.user_id)).actif;
+
+  // Le catalogue de l'offre gratuite est plafonné : c'est ce qui fait qu'une
+  // boutique qui marche devient un abonnement. Le compte est relu ici et non
+  // pris de l'écran, qui peut dater de plusieurs minutes.
+  if (!pro) {
+    const { count } = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("shop_id", shop.id);
+
+    if ((count ?? 0) >= LIMITES_GRATUIT.produits) {
+      return {
+        message: `L'offre gratuite s'arrête à ${LIMITES_GRATUIT.produits} produits, et vous y êtes. Passez en Pro pour en publier autant que vous voulez — vos produits actuels restent en ligne.`,
+      };
+    }
+  }
+
   // Le programme revendeurs est une contrepartie de l'offre Pro. Le formulaire
   // masque déjà le champ aux comptes gratuits, mais masquer n'empêche pas
   // d'envoyer : c'est ici que la valeur est arrêtée.
-  const commissionAutorisee = (await getAccesPro(shop.user_id)).actif
-    ? parsed.data.resellerCommissionPct
-    : 0;
+  const commissionAutorisee = pro ? parsed.data.resellerCommissionPct : 0;
 
   // L'identifiant est tiré ici plutôt que par la base : il entre dans le slug,
   // qu'on veut poser dès l'insertion.
@@ -221,6 +241,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
     productId: product.id,
     productName: parsed.data.name,
     startPosition: 0,
+    maxImages: pro ? PHOTOS_MAX_PRO : LIMITES_GRATUIT.photosParProduit,
   });
 
   revalidatePath("/dashboard/produits");
@@ -254,12 +275,12 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
   const existing = await getProduct(shop.id, productId);
   if (!existing) return { message: "Produit introuvable." };
 
+  const pro = (await getAccesPro(shop.user_id)).actif;
+
   // Le programme revendeurs est une contrepartie de l'offre Pro. Le formulaire
   // masque déjà le champ aux comptes gratuits, mais masquer n'empêche pas
   // d'envoyer : c'est ici que la valeur est arrêtée.
-  const commissionAutorisee = (await getAccesPro(shop.user_id)).actif
-    ? parsed.data.resellerCommissionPct
-    : 0;
+  const commissionAutorisee = pro ? parsed.data.resellerCommissionPct : 0;
 
   const supabase = await createClient();
   // Le slug n'est volontairement pas recalculé : renommer un produit ne doit
@@ -286,6 +307,13 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     productId,
     productName: parsed.data.name,
     startPosition: existing.product_images?.length ?? 0,
+    // Les photos déjà en ligne comptent dans le plafond : un compte gratuit
+    // ne contourne pas la limite en ajoutant une photo à la fois.
+    maxImages: Math.max(
+      (pro ? PHOTOS_MAX_PRO : LIMITES_GRATUIT.photosParProduit) -
+        (existing.product_images?.length ?? 0),
+      0,
+    ),
   });
 
   revalidatePath("/dashboard/produits");

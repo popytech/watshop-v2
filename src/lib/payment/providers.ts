@@ -23,6 +23,33 @@ export const PRO_CURRENCY = "GNF";
  * Prix mensuels, en francs guinéens, sans commission sur les ventes — c'est
  * l'argument commercial, et il n'a de valeur que s'il reste vrai.
  */
+/**
+ * Ce que l'offre gratuite laisse faire.
+ *
+ * Elle contenait tout le produit : boutique complète, produits et photos
+ * illimités. Une offre gratuite qui suffit n'a aucune raison de devenir
+ * payante, et c'est ce qui manquait pour que l'abonnement existe autrement que
+ * sur la grille tarifaire.
+ *
+ * Le curseur est placé là où il ne gêne pas celui qui essaie, et se fait sentir
+ * dès que le commerce tourne : dix articles laissent largement de quoi ouvrir
+ * une boutique et encaisser ses premières commandes ; une seule photo suffit à
+ * présenter un article, mais quatre le vendent mieux.
+ *
+ * Ce qui n'est PAS limité, et ne doit pas l'être : les commandes, les
+ * visiteurs, les livreurs. Brider les ventes d'un commerçant, c'est brider son
+ * revenu — et notre argument reste « aucune commission sur vos ventes ».
+ *
+ * Deux nombres à changer si le curseur est mal placé, et rien d'autre.
+ */
+export const LIMITES_GRATUIT = {
+  produits: 10,
+  photosParProduit: 1,
+};
+
+/** Le plafond de photos reste celui du stockage, quelle que soit la formule. */
+export const PHOTOS_MAX_PRO = 4;
+
 export const PLANS = [
   {
     id: "free" as const,
@@ -31,7 +58,8 @@ export const PLANS = [
     accroche: "De quoi ouvrir votre boutique et encaisser vos premières commandes.",
     inclus: [
       "Boutique en ligne à votre nom",
-      "Produits et photos illimités",
+      `Jusqu'à ${LIMITES_GRATUIT.produits} produits`,
+      `${LIMITES_GRATUIT.photosParProduit} photo par produit`,
       "Commandes reçues sur WhatsApp",
       "Zones de livraison et livreurs",
       "Aucune commission sur vos ventes",
@@ -49,7 +77,8 @@ export const PLANS = [
     // prioritaire » ne recouvrait aucun mécanisme. Vendre ce qu'on ne livre pas
     // coûte plus cher que de ne pas vendre.
     inclus: [
-      "Tout ce que contient l'offre gratuite",
+      "Produits illimités",
+      `Jusqu'à ${PHOTOS_MAX_PRO} photos par produit`,
       "Boutique mise en avant dans le marketplace",
       "Programme revendeurs : d'autres vendent pour vous",
       "Votre boutique sans la mention Watshop",

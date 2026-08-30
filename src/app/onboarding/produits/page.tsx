@@ -14,6 +14,7 @@ import { ProductListItem } from "@/components/shop/product-list-item";
 import { createProduct, finishProductsStep } from "@/lib/shop/actions";
 import { getProducts, requireShop } from "@/lib/shop/queries";
 import { getAccesPro } from "@/lib/payment/access";
+import { LIMITES_GRATUIT, PHOTOS_MAX_PRO } from "@/lib/payment/providers";
 
 export const metadata = { title: "Vos produits — Watshop" };
 
@@ -64,6 +65,7 @@ export default async function OnboardingProductsPage() {
             submitLabel="Ajouter le produit"
             currency={shop.currency_symbol}
             pro={acces.actif}
+            maxImages={acces.actif ? PHOTOS_MAX_PRO : LIMITES_GRATUIT.photosParProduit}
           />
         </CardContent>
       </Card>

@@ -28,9 +28,11 @@ type Props = {
   currency: string;
   /** Le programme revendeurs est une contrepartie de l'offre Pro. */
   pro: boolean;
+  /** Nombre de photos que la formule du compte autorise. */
+  maxImages: number;
 };
 
-const MAX_IMAGES = 4;
+// Annoncé au vendeur, et appliqué côté serveur : le plafond suit la formule.
 
 export function ProductForm({
   action,
@@ -39,6 +41,7 @@ export function ProductForm({
   submitLabel,
   currency,
   pro,
+  maxImages,
 }: Props) {
   const [state, formAction, pending] = useActionState(action, initialFormState);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -172,12 +175,12 @@ export function ProductForm({
             accept="image/jpeg,image/png,image/webp,image/avif"
             className="h-11 py-2"
             onChange={(event) => {
-              const files = Array.from(event.target.files ?? []).slice(0, MAX_IMAGES);
+              const files = Array.from(event.target.files ?? []).slice(0, maxImages);
               setPreviews(files.map((file) => URL.createObjectURL(file)));
             }}
           />
           <FieldDescription>
-            Jusqu&apos;à {MAX_IMAGES} photos, 5 Mo chacune. La première sera la photo principale.
+            Jusqu&apos;à {maxImages} photos, 5 Mo chacune. La première sera la photo principale.
           </FieldDescription>
           {previews.length > 0 ? (
             <ul className="mt-2 flex flex-wrap gap-2">

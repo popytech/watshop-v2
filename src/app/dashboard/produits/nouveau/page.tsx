@@ -13,6 +13,7 @@ import { ProductForm } from "@/components/shop/product-form";
 import { createProduct } from "@/lib/shop/actions";
 import { requirePublishedShop } from "@/lib/shop/queries";
 import { getAccesPro } from "@/lib/payment/access";
+import { LIMITES_GRATUIT, PHOTOS_MAX_PRO } from "@/lib/payment/providers";
 
 export const metadata = { title: "Nouveau produit — Watshop" };
 
@@ -42,6 +43,7 @@ export default async function NewProductPage() {
             submitLabel="Ajouter le produit"
             currency={shop.currency_symbol}
             pro={acces.actif}
+            maxImages={acces.actif ? PHOTOS_MAX_PRO : LIMITES_GRATUIT.photosParProduit}
           />
         </CardContent>
       </Card>

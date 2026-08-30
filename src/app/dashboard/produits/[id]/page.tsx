@@ -16,6 +16,7 @@ import { DeleteProductButton } from "@/components/shop/delete-product-button";
 import { toggleProduct, updateProduct } from "@/lib/shop/actions";
 import { getProduct, requirePublishedShop } from "@/lib/shop/queries";
 import { getAccesPro } from "@/lib/payment/access";
+import { LIMITES_GRATUIT, PHOTOS_MAX_PRO } from "@/lib/payment/providers";
 
 export const metadata = { title: "Modifier un produit — Watshop" };
 
@@ -80,6 +81,7 @@ export default async function EditProductPage({ params }: Props) {
             submitLabel="Enregistrer"
             currency={shop.currency_symbol}
             pro={acces.actif}
+            maxImages={acces.actif ? PHOTOS_MAX_PRO : LIMITES_GRATUIT.photosParProduit}
             defaultValues={{
               name: product.name,
               price: String(product.price),
