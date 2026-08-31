@@ -16,10 +16,27 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") || "";
   const path = request.nextUrl.pathname;
 
-  // Porté depuis l'ancien src/middleware.ts (renommé proxy.ts en Next.js 16).
-  if (host === "www.watshop.africa") {
+  // Une seule adresse fait foi, et c'est le domaine nu : une boutique se
+  // partage sur WhatsApp, où `watshop.africa/maboutique` se lit et se retape
+  // mieux que la même chose précédée de « www. ».
+  //
+  // Le « www. » est retiré quel que soit le domaine, plutôt que sur un nom
+  // écrit en dur : la règle vaut aussi pour un domaine d'essai ou de
+  // pré-production, et rien n'est à modifier le jour où l'adresse change.
+  //
+  // ATTENTION — cette redirection doit aller dans le même sens que celle
+  // configurée chez l'hébergeur. Réglées en sens contraires, les deux se
+  // renvoient la balle et le site répond 308 indéfiniment sans jamais
+  // s'afficher. C'est exactement ce qui est arrivé à la mise en service :
+  //
+  //     watshop.africa      → 308 → www.watshop.africa   (règle de l'hébergeur)
+  //     www.watshop.africa  → 308 → watshop.africa       (cette règle-ci)
+  //
+  // Côté hébergeur, le domaine nu doit donc servir la production, et le
+  // « www. » rediriger vers lui.
+  if (host.startsWith("www.")) {
     const url = request.nextUrl.clone();
-    url.host = "watshop.africa";
+    url.host = host.slice(4);
     url.protocol = "https:";
     return NextResponse.redirect(url, 308);
   }
