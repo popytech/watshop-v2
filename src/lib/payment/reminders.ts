@@ -39,7 +39,7 @@ export const PALIERS: Palier[] = [
     titre: "Votre abonnement Pro se termine dans une semaine",
     message: ({ boutique, url, prix }) =>
       `Bonjour ! L'abonnement Pro de ${boutique} se termine dans 7 jours.\n\n` +
-      `Renouvelez pour ${prix} et gardez vos produits illimités, ` +
+      `Renouvelez pour ${prix} le mois et gardez vos produits illimités, ` +
       `votre mise en avant et votre programme revendeurs.\n\n${url}`,
   },
   {

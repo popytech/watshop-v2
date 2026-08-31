@@ -86,7 +86,7 @@ export function GnakryPayForm({
 
       <Button type="submit" size="lg" className="h-11" disabled={pending}>
         {pending ? <Loader2 className="animate-spin" /> : <Smartphone />}
-        Payer {formatMoney(montant, devise)}
+        Payer {formatMoney(montant, devise)} pour un mois
       </Button>
 
       {state.message ? (
