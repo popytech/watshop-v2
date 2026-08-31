@@ -324,43 +324,51 @@ export async function essayerAuthentifications() {
 
   const hex = (message: string) =>
     createHmac("sha256", CLIENT_SECRET).update(message, "utf8").digest("hex");
-  const b64 = (message: string) =>
-    createHmac("sha256", CLIENT_SECRET).update(message, "utf8").digest("base64");
+  const basic = (utilisateur: string, motDePasse: string) =>
+    `Basic ${Buffer.from(`${utilisateur}:${motDePasse}`).toString("base64")}`;
 
   const variantes: { nom: string; entetes: Record<string, string>; corps: string }[] = [
     {
-      nom: "X-API-KEY clientId:hex(clientId), corps vide",
-      entetes: { "X-API-KEY": `${CLIENT_ID}:${hex(CLIENT_ID)}` },
-      corps: "{}",
-    },
-    {
-      nom: "X-API-KEY clientId:hex(clientId), corps avec identifiants",
-      entetes: { "X-API-KEY": `${CLIENT_ID}:${hex(CLIENT_ID)}` },
-      corps: JSON.stringify({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET }),
-    },
-    {
-      nom: "X-API-KEY clientId:base64(clientId)",
-      entetes: { "X-API-KEY": `${CLIENT_ID}:${b64(CLIENT_ID)}` },
-      corps: "{}",
-    },
-    {
-      nom: "X-API-KEY = clientId seul",
-      entetes: { "X-API-KEY": CLIENT_ID },
-      corps: "{}",
-    },
-    {
-      nom: "corps avec identifiants, sans X-API-KEY",
-      entetes: {},
-      corps: JSON.stringify({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET }),
-    },
-    {
       nom: "Basic clientId:clientSecret",
+      entetes: { Authorization: basic(CLIENT_ID, CLIENT_SECRET) },
+      corps: "{}",
+    },
+    {
+      nom: "Basic clientId:hex(clientId)",
+      entetes: { Authorization: basic(CLIENT_ID, hex(CLIENT_ID)) },
+      corps: "{}",
+    },
+    {
+      nom: "Basic clientId:clientSecret + X-API-KEY",
       entetes: {
-        Authorization: `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64")}`,
+        Authorization: basic(CLIENT_ID, CLIENT_SECRET),
+        "X-API-KEY": `${CLIENT_ID}:${hex(CLIENT_ID)}`,
       },
       corps: "{}",
     },
+    {
+      nom: "Basic clientId:clientSecret, corps avec identifiants",
+      entetes: { Authorization: basic(CLIENT_ID, CLIENT_SECRET) },
+      corps: JSON.stringify({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET }),
+    },
+    {
+      nom: "Bearer clientSecret",
+      entetes: { Authorization: `Bearer ${CLIENT_SECRET}` },
+      corps: "{}",
+    },
+    {
+      nom: "Basic clientSecret:clientId (inversé)",
+      entetes: { Authorization: basic(CLIENT_SECRET, CLIENT_ID) },
+      corps: "{}",
+    },
   ];
+
+  const forme = {
+    longueurClientId: CLIENT_ID.length,
+    longueurSecret: CLIENT_SECRET.length,
+    secretPropre: /^[\w.\-~+/=]+$/.test(CLIENT_SECRET),
+    espaceOuSautDeLigne: /\s/.test(CLIENT_SECRET) || /\s/.test(CLIENT_ID),
+  };
 
   const resultats = [];
 
@@ -389,5 +397,5 @@ export async function essayerAuthentifications() {
     }
   }
 
-  return { url: BASE_URL, resultats };
+  return { url: BASE_URL, forme, resultats };
 }
