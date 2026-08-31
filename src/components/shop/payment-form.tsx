@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -8,21 +8,65 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { Input } from "@/components/ui/input";
 import { declarePayment } from "@/lib/payment/actions";
 import { initialFormState } from "@/lib/shop/state";
+import { DUREES } from "@/lib/payment/pricing";
+import { cn } from "@/lib/utils";
 
 export function PaymentForm({
-  amount,
+  tarifMensuel,
   currency,
   countryCode,
 }: {
-  amount: number;
+  tarifMensuel: number;
   currency: string;
   countryCode: string;
 }) {
   const [state, action, pending] = useActionState(declarePayment, initialFormState);
+  const [mois, setMois] = useState<number>(DUREES[0].mois);
+
+  const duree = DUREES.find((d) => d.mois === mois) ?? DUREES[0];
+  const montant = tarifMensuel * duree.moisFactures;
 
   return (
     <form action={action}>
-      <input type="hidden" name="amount" value={amount} />
+      <input type="hidden" name="amount" value={montant} />
+      <input type="hidden" name="mois" value={mois} />
+
+      {/* Le même choix de durée que pour le paiement en ligne : un virement
+          d'un an qui n'accorderait qu'un mois serait une promesse trahie. */}
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">Durée</p>
+        <div className="grid grid-cols-2 gap-2">
+          {DUREES.map((d) => {
+            const cadeau = d.mois - d.moisFactures;
+            const actif = d.mois === mois;
+
+            return (
+              <button
+                key={d.mois}
+                type="button"
+                onClick={() => setMois(d.mois)}
+                aria-pressed={actif}
+                className={cn(
+                  "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                  actif
+                    ? "border-primary bg-primary/5"
+                    : "text-muted-foreground hover:border-foreground/30",
+                )}
+              >
+                <span className="text-sm font-medium">{d.libelle}</span>
+                <span className="text-xs tabular-nums">
+                  {new Intl.NumberFormat("fr-FR").format(tarifMensuel * d.moisFactures)} {currency}
+                </span>
+                {cadeau > 0 ? (
+                  <span className="text-xs font-medium text-primary">
+                    {cadeau} mois offert{cadeau > 1 ? "s" : ""}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <input type="hidden" name="countryCode" value={countryCode} />
 
       <FieldGroup className="gap-4">
@@ -68,7 +112,7 @@ export function PaymentForm({
 
         <Button type="submit" size="lg" className="h-11 w-full sm:w-auto sm:self-start" disabled={pending}>
           {pending ? <Loader2 className="animate-spin" /> : null}
-          J&apos;ai payé {new Intl.NumberFormat("fr-FR").format(amount)} {currency}
+          J&apos;ai payé {new Intl.NumberFormat("fr-FR").format(montant)} {currency}
         </Button>
       </FieldGroup>
     </form>

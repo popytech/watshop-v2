@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole, verifySession } from "@/lib/dal";
 import { fieldErrors, normalizePhone, paymentDeclarationSchema } from "@/lib/network/schemas";
 import { watshopMobileMoneyNumber } from "@/lib/payment/providers";
-import { deviseDuPays } from "@/lib/payment/pricing";
+import { deviseDuPays, dureeValide } from "@/lib/payment/pricing";
 import type { FormState } from "@/lib/shop/state";
 
 /**
@@ -24,6 +24,11 @@ export async function declarePayment(_prev: FormState, formData: FormData): Prom
   });
 
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+
+  // La durée déclarée est confrontée à la liste des durées offertes. Elle
+  // n'accorde rien par elle-même : la ligne naît en attente, et c'est un
+  // administrateur qui la confirmera après avoir vu le virement.
+  const duree = dureeValide(Number(formData.get("mois") ?? 1));
 
   if (!watshopMobileMoneyNumber()) {
     return { message: "Le paiement Mobile Money n'est pas encore ouvert." };
@@ -58,6 +63,7 @@ export async function declarePayment(_prev: FormState, formData: FormData): Prom
     provider: "manual",
     amount: parsed.data.amount,
     currency: devise,
+    months: duree.mois,
     reference: parsed.data.reference,
     payer_phone: phone,
   });

@@ -7,7 +7,7 @@ import { verifySession } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/network/schemas";
-import { deviseDuPays, tarifPro } from "@/lib/payment/pricing";
+import { DUREES, deviseDuPays, dureeValide, montantPour } from "@/lib/payment/pricing";
 import { demanderPaiement, estConfiguree, METHODES } from "@/lib/payment/gnakrypay/client";
 import { getSiteUrl } from "@/lib/site-url";
 import type { PaiementState } from "@/lib/payment/gnakrypay/state";
@@ -17,6 +17,13 @@ const schema = z.object({
     message: "Choisissez un moyen de paiement.",
   }),
   telephone: z.string().trim().min(6, "Numéro trop court."),
+  // La durée vient du formulaire mais n'est jamais crue sur parole : elle est
+  // confrontée à la liste des durées offertes, et le montant en est déduit
+  // côté serveur. Un prix qui vient du navigateur est un prix que l'acheteur
+  // choisit.
+  mois: z.coerce.number().int().refine((m) => DUREES.some((d) => d.mois === m), {
+    message: "Durée inconnue.",
+  }),
   countryCode: z.string().trim().optional(),
 });
 
@@ -43,6 +50,7 @@ export async function lancerPaiement(
   const parsed = schema.safeParse({
     methode: formData.get("methode"),
     telephone: formData.get("telephone"),
+    mois: formData.get("mois") ?? 1,
     countryCode: (formData.get("countryCode") as string) || undefined,
   });
 
@@ -58,7 +66,8 @@ export async function lancerPaiement(
   // débiter une devise étrangère, et un montant affiché dans une monnaie
   // qu'on ne manipule pas ne veut rien dire.
   const devise = deviseDuPays(pays);
-  const montant = tarifPro(devise);
+  const duree = dureeValide(parsed.data.mois);
+  const montant = montantPour(devise, duree.mois);
   const telephone = normalizePhone(parsed.data.telephone, pays);
   if (!telephone) return { message: "Ce numéro ne semble pas valide.", ok: false };
 
@@ -84,6 +93,10 @@ export async function lancerPaiement(
       amount: montant,
       currency: devise,
       payer_phone: telephone,
+      // La durée voyage avec le paiement : la période est accordée à la
+      // confirmation, qui peut survenir des jours plus tard par le webhook.
+      // Rien d'autre ne se souviendrait alors de ce qui a été acheté.
+      months: duree.mois,
       status: "pending",
     })
     .select("id")
@@ -102,7 +115,7 @@ export async function lancerPaiement(
       telephone: telephone.replace(/^\+/, ""),
       methode: parsed.data.methode as (typeof METHODES)[number]["id"],
       reference: paiement.id,
-      description: "Abonnement Watshop Pro",
+      description: `Abonnement Watshop Pro — ${duree.libelle}`,
       paysISO2: pays,
       retourUrl: `${siteUrl}/dashboard/abonnement`,
       annulationUrl: `${siteUrl}/dashboard/abonnement`,
@@ -113,7 +126,7 @@ export async function lancerPaiement(
     return {
       ok: true,
       message:
-        "Demande envoyée. Validez le paiement sur votre téléphone : votre abonnement s'active tout seul dès la confirmation.",
+        `Demande envoyée. Validez le paiement sur votre téléphone : vos ${duree.libelle} s'activent tout seuls dès la confirmation.`,
       paiementUrl: cree.paymentUrl,
     };
   } catch {

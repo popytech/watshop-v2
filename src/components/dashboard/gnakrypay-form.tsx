@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { lancerPaiement } from "@/lib/payment/gnakrypay/actions";
 import { initialPaiementState } from "@/lib/payment/gnakrypay/state";
 import { formatMoney } from "@/lib/format";
+import { DUREES, moisOfferts } from "@/lib/payment/pricing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,24 +26,67 @@ import { cn } from "@/lib/utils";
  * ne sait pas que c'est automatique rappelle le support.
  */
 export function GnakryPayForm({
-  montant,
+  tarifMensuel,
   devise,
   paysParDefaut,
   methodes,
 }: {
-  montant: number;
+  tarifMensuel: number;
   devise: string;
   paysParDefaut: string;
   methodes: readonly { id: string; label: string }[];
 }) {
   const [state, action, pending] = useActionState(lancerPaiement, initialPaiementState);
   const [methode, setMethode] = useState(methodes[0]?.id ?? "OM");
+  const [mois, setMois] = useState<number>(DUREES[0].mois);
+
+  const duree = DUREES.find((d) => d.mois === mois) ?? DUREES[0];
+  const montant = tarifMensuel * duree.moisFactures;
+  const offerts = moisOfferts(mois);
   const telId = useId();
 
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="countryCode" value={paysParDefaut} />
       <input type="hidden" name="methode" value={methode} />
+      <input type="hidden" name="mois" value={mois} />
+
+      <Field>
+        <FieldLabel>Durée</FieldLabel>
+        {/* Les mois offerts sont annoncés sur le bouton lui-même : une remise
+            qu'il faut calculer n'en est pas une. */}
+        <div className="grid grid-cols-2 gap-2">
+          {DUREES.map((d) => {
+            const cadeau = d.mois - d.moisFactures;
+            const actif = d.mois === mois;
+
+            return (
+              <button
+                key={d.mois}
+                type="button"
+                onClick={() => setMois(d.mois)}
+                aria-pressed={actif}
+                className={cn(
+                  "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                  actif
+                    ? "border-primary bg-primary/5"
+                    : "text-muted-foreground hover:border-foreground/30",
+                )}
+              >
+                <span className="text-sm font-medium">{d.libelle}</span>
+                <span className="text-xs tabular-nums">
+                  {formatMoney(tarifMensuel * d.moisFactures, devise)}
+                </span>
+                {cadeau > 0 ? (
+                  <span className="text-xs font-medium text-primary">
+                    {cadeau} mois offert{cadeau > 1 ? "s" : ""}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </Field>
 
       <Field>
         <FieldLabel>Payer avec</FieldLabel>
@@ -86,7 +130,8 @@ export function GnakryPayForm({
 
       <Button type="submit" size="lg" className="h-11" disabled={pending}>
         {pending ? <Loader2 className="animate-spin" /> : <Smartphone />}
-        Payer {formatMoney(montant, devise)} pour un mois
+        Payer {formatMoney(montant, devise)} pour {duree.libelle}
+        {offerts > 0 ? ` (${offerts} offert${offerts > 1 ? "s" : ""})` : ""}
       </Button>
 
       {state.message ? (

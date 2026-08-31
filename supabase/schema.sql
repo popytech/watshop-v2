@@ -307,6 +307,9 @@ create table public.payments (
   -- par l'agrégateur.
   reference text,
   payer_phone text,
+  -- Mois achetés par ce paiement. Portés par la ligne elle-même : la période
+  -- est accordée à la confirmation, qui peut survenir des jours plus tard.
+  months smallint not null default 1 check (months between 1 and 12),
   status payment_status not null default 'pending',
   created_at timestamptz not null default now(),
   confirmed_at timestamptz
@@ -925,7 +928,8 @@ begin
     set plan = 'pro',
         is_active = true,
         payment_reference = new.reference,
-        ends_at = greatest(coalesce(ends_at, now()), now()) + interval '1 month'
+        ends_at = greatest(coalesce(ends_at, now()), now())
+                  + make_interval(months => greatest(new.months, 1))
     where user_id = new.user_id;
 
     update public.profiles set is_pro = true where id = new.user_id;

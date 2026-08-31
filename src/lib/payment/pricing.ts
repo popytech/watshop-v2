@@ -41,6 +41,45 @@ export const TARIFS: Record<string, { pro: number; business: number }> = {
 /** Devise de référence, celle de la page d'accueil et des comptes sans pays. */
 export const DEVISE_PAR_DEFAUT = "GNF";
 
+/**
+ * Les durées qu'un vendeur peut acheter d'un coup.
+ *
+ * La remise est exprimée en mois offerts plutôt qu'en pourcentage : « 12 mois,
+ * 2 offerts » se comprend et se répète, là où « −16,7 % » demande une
+ * calculatrice. C'est aussi ce qui se dit au marché.
+ *
+ * Trois mois ne donnent rien de gratuit, et c'est voulu : l'avantage y est déjà
+ * de ne payer qu'une fois par trimestre. La remise commence là où
+ * l'engagement devient réel.
+ *
+ * Ces trois lignes sont une décision commerciale, pas une contrainte technique :
+ * changer `moisFactures` suffit à changer l'offre partout.
+ */
+export const DUREES = [
+  { mois: 1, moisFactures: 1, libelle: "1 mois" },
+  { mois: 3, moisFactures: 3, libelle: "3 mois" },
+  { mois: 6, moisFactures: 5, libelle: "6 mois" },
+  { mois: 12, moisFactures: 10, libelle: "12 mois" },
+] as const;
+
+export type Duree = (typeof DUREES)[number];
+
+/** La durée demandée, ou le mois simple si la valeur reçue n'existe pas. */
+export function dureeValide(mois: number): Duree {
+  return DUREES.find((d) => d.mois === mois) ?? DUREES[0];
+}
+
+/** Ce qu'un vendeur paie réellement pour la durée choisie. */
+export function montantPour(devise: string, mois: number): number {
+  return tarifPro(devise) * dureeValide(mois).moisFactures;
+}
+
+/** Mois offerts sur la durée, 0 s'il n'y en a pas. */
+export function moisOfferts(mois: number): number {
+  const duree = dureeValide(mois);
+  return duree.mois - duree.moisFactures;
+}
+
 export function deviseDuPays(codePays: string | null | undefined): string {
   return (codePays && DEVISE_PAR_PAYS[codePays]) || DEVISE_PAR_DEFAUT;
 }

@@ -208,6 +208,8 @@ type Payment = {
   currency: string;
   reference: string | null;
   payer_phone: string | null;
+  /** Mois achetés par ce paiement ; la confirmation les ajoute à l'échéance. */
+  months: number;
   status: PaymentStatus;
   created_at: string;
   confirmed_at: string | null;

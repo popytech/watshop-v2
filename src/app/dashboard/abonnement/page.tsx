@@ -117,7 +117,7 @@ export default async function SubscriptionPage() {
               <div className="flex flex-col gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
                 <p className="text-sm font-medium">Payer maintenant par GNAKRYPAY</p>
                 <GnakryPayForm
-                  montant={prix}
+                  tarifMensuel={prix}
                   devise={devise}
                   paysParDefaut={shop.country_code}
                   methodes={METHODES}
@@ -143,7 +143,7 @@ export default async function SubscriptionPage() {
                   </p>
                 </div>
                 <PaymentForm
-                  amount={prix}
+                  tarifMensuel={prix}
                   currency={devise}
                   countryCode={shop.country_code}
                 />
