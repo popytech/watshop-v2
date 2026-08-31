@@ -24,7 +24,18 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const BASE_URL = process.env.GNAKRYPAY_API_URL ?? "https://prod-api.djomy.africa";
 const CLIENT_ID = process.env.GNAKRYPAY_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.GNAKRYPAY_CLIENT_SECRET ?? "";
-const WEBHOOK_SECRET = process.env.GNAKRYPAY_WEBHOOK_SECRET ?? "";
+/*
+ * La clé qui signe les webhooks.
+ *
+ * La documentation dit « signé avec la clé secrète, accessible depuis l'espace
+ * développeur », et cet espace n'expose qu'un seul secret : celui du client.
+ * Les deux ne font donc qu'un, et l'exiger dans une variable séparée revenait à
+ * demander deux fois la même chose — avec le risque qu'on l'oublie et que tous
+ * les retours de paiement soient refusés en silence.
+ *
+ * La variable reste lisible pour le jour où le prestataire les séparera.
+ */
+const WEBHOOK_SECRET = process.env.GNAKRYPAY_WEBHOOK_SECRET?.trim() || CLIENT_SECRET;
 
 /** Méthodes réellement ouvertes en Guinée. Les autres sont annoncées « bientôt ». */
 export const METHODES = [
