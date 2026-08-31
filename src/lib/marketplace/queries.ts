@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { PAGE_SIZE, type MarketplaceParams } from "@/lib/marketplace/params";
+import { COLONNES_PUBLIQUES } from "@/lib/shop/public";
 import type { MarketplaceProduct, MarketplaceShop, Page } from "@/lib/marketplace/types";
 
 /*
@@ -75,7 +76,7 @@ export async function listShops(params: MarketplaceParams): Promise<Page<Marketp
   const debut = (params.page - 1) * PAGE_SIZE;
 
   const requete = filtrerBoutiques(
-    supabase.from("shops").select("*, products(count)", { count: "exact" }),
+    supabase.from("shops").select(`${COLONNES_PUBLIQUES}, products(count)`, { count: "exact" }),
     params,
   )
     // Les boutiques mises en avant d'abord, les vérifiées ensuite, puis les plus

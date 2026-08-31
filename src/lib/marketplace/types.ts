@@ -14,7 +14,14 @@ import type { Database } from "@/lib/supabase/types";
 type Shop = Database["public"]["Tables"]["shops"]["Row"];
 type Product = Database["public"]["Tables"]["products"]["Row"];
 
-export type MarketplaceShop = Shop & {
+/*
+ * Le rôle anonyme n'a plus accès à toutes les colonnes de `shops` : le
+ * marketplace lit donc la même forme réduite que la vitrine.
+ */
+export type MarketplaceShop = Omit<
+  Shop,
+  "whatsapp_number" | "mobile_money_number" | "onboarding_step" | "created_by_agent_id"
+> & {
   /** Compte des produits visibles, remonté par la jointure. */
   products: { count: number }[];
 };

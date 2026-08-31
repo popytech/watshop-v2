@@ -3,9 +3,7 @@ import { BadgeCheck, MapPin, Package, Store, Truck } from "lucide-react";
 
 import { COUNTRIES } from "@/lib/phone";
 import { formatNumber } from "@/lib/format";
-import type { Database } from "@/lib/supabase/types";
-
-type Shop = Database["public"]["Tables"]["shops"]["Row"];
+import type { PublicShop } from "@/lib/shop/public";
 
 /**
  * Bandeau d'ouverture de la boutique d'un vendeur.
@@ -28,7 +26,7 @@ export function ShopHero({
   zones,
   photoDeSecours,
 }: {
-  shop: Shop;
+  shop: PublicShop;
   produits: number;
   zones: number;
   /**

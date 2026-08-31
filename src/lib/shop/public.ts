@@ -18,9 +18,41 @@ export type PublicProduct = Product & {
   product_images: { url: string; alt_text: string; position: number }[];
 };
 
-export const getPublicShop = cache(async (slug: string): Promise<Shop | null> => {
+/**
+ * Les colonnes d'une boutique que le public a le droit de lire.
+ *
+ * Le rôle anonyme n'a plus le SELECT sur toute la table (migration 0017) : son
+ * numéro WhatsApp et son Mobile Money lui sont retirés, pour qu'un robot ne
+ * puisse pas les moissonner et qu'un acheteur ne traite pas en direct, hors de
+ * toute commande.
+ *
+ * Il faut donc nommer les colonnes : un `select("*")` échoue dès qu'une seule
+ * manque au lot. C'est une contrainte utile — la liste dit noir sur blanc ce que
+ * la vitrine expose.
+ */
+/**
+ * La boutique telle que le public la voit — sans les coordonnées du vendeur ni
+ * notre cuisine interne.
+ *
+ * Le type dit ce que la base applique : ces colonnes ne sont pas seulement
+ * omises de la requête, elles sont hors de portée du rôle anonyme. Un code qui
+ * essaierait d'y lire un numéro de téléphone ne compile plus.
+ */
+export type PublicShop = Omit<
+  Shop,
+  "whatsapp_number" | "mobile_money_number" | "onboarding_step" | "created_by_agent_id"
+>;
+
+export const COLONNES_PUBLIQUES =
+  "id, user_id, name, slug, description, country_code, currency_symbol, logo_url, cover_url, primary_color, category, published_at, is_active, is_verified, is_sponsored, created_at";
+
+export const getPublicShop = cache(async (slug: string): Promise<PublicShop | null> => {
   const supabase = await createClient();
-  const { data } = await supabase.from("shops").select("*").eq("slug", slug).maybeSingle();
+  const { data } = await supabase
+    .from("shops")
+    .select(COLONNES_PUBLIQUES)
+    .eq("slug", slug)
+    .maybeSingle();
 
   return data ?? null;
 });

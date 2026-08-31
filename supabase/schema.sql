@@ -1049,7 +1049,16 @@ $$;
 -- Seul le rôle anonyme est visé : un privilège de colonne se retire par rôle et
 -- non par ligne, et le retirer à `authenticated` empêcherait le vendeur de lire
 -- son propre numéro depuis son tableau de bord.
-revoke select (whatsapp_number, mobile_money_number) on public.shops from anon;
+-- Postgres ne retire pas un privilège de colonne à un rôle qui détient le
+-- SELECT sur la table entière : il faut retirer le tout, puis rendre une à une
+-- les colonnes permises. L'ordre inverse passe sans erreur et ne fait rien.
+revoke select on public.shops from anon;
+
+grant select (
+  id, user_id, name, slug, description, country_code, currency_symbol,
+  logo_url, cover_url, primary_color, category, published_at,
+  is_active, is_verified, is_sponsored, created_at
+) on public.shops to anon;
 
 -- ============================================================
 -- Bucket privé des pièces de candidature agent
