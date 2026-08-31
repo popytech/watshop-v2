@@ -19,7 +19,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * puis POST /v1/auth pour un jeton Bearer, exigé avec la clé sur chaque appel.
  */
 
-const BASE_URL = process.env.GNAKRYPAY_API_URL ?? "https://api.djomy.africa";
+// L'adresse de production, vérifiée : api.djomy.africa renvoie un 403 de
+// Cloudflare sur toutes ses routes, tandis que prod-api répond bien à l'API.
+const BASE_URL = process.env.GNAKRYPAY_API_URL ?? "https://prod-api.djomy.africa";
 const CLIENT_ID = process.env.GNAKRYPAY_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.GNAKRYPAY_CLIENT_SECRET ?? "";
 const WEBHOOK_SECRET = process.env.GNAKRYPAY_WEBHOOK_SECRET ?? "";
@@ -60,6 +62,26 @@ function signer(message: string, secret: string): string {
   return createHmac("sha256", secret).update(message, "utf8").digest("hex");
 }
 
+/*
+ * En-têtes joints à chaque appel.
+ *
+ * L'API de la passerelle est derrière Cloudflare, qui refusait nos requêtes par
+ * un 403 accompagné d'une page HTML — pas une réponse de l'API, mais un blocage
+ * en amont. La cause tenait à l'allure de la requête : `fetch` côté Node ne
+ * présente ni User-Agent ni Accept, ce qu'un pare-feu applicatif lit comme un
+ * robot.
+ *
+ * Ces trois lignes ne contournent aucune protection : elles décrivent
+ * honnêtement un client HTTP. Si le blocage persiste, c'est que Cloudflare filtre
+ * sur l'adresse IP, et il faudra alors demander au prestataire d'autoriser
+ * celles de notre hébergeur — aucun en-tête n'y changera rien.
+ */
+const ENTETES_COMMUNES = {
+  "User-Agent": "Watshop/1.0 (+https://watshop.africa)",
+  Accept: "application/json",
+  "Content-Type": "application/json",
+};
+
 /** `X-API-KEY`, à joindre à toutes les requêtes, jeton compris. */
 function cleApi(): string {
   return `${CLIENT_ID}:${signer(CLIENT_ID, CLIENT_SECRET)}`;
@@ -80,7 +102,7 @@ async function obtenirJeton(): Promise<string> {
 
   const reponse = await fetch(`${BASE_URL}/v1/auth`, {
     method: "POST",
-    headers: { "X-API-KEY": cleApi(), "Content-Type": "application/json" },
+    headers: { ...ENTETES_COMMUNES, "X-API-KEY": cleApi() },
     body: "{}",
     cache: "no-store",
   });
@@ -108,9 +130,9 @@ async function appeler<T>(chemin: string, init: RequestInit = {}): Promise<T> {
   const reponse = await fetch(`${BASE_URL}${chemin}`, {
     ...init,
     headers: {
+      ...ENTETES_COMMUNES,
       "X-API-KEY": cleApi(),
       Authorization: `Bearer ${acces}`,
-      "Content-Type": "application/json",
       ...(init.headers ?? {}),
     },
     cache: "no-store",
@@ -246,7 +268,7 @@ export async function diagnostiquerPasserelle() {
   try {
     const reponse = await fetch(`${BASE_URL}/v1/auth`, {
       method: "POST",
-      headers: { "X-API-KEY": cleApi(), "Content-Type": "application/json" },
+      headers: { ...ENTETES_COMMUNES, "X-API-KEY": cleApi() },
       body: "{}",
       cache: "no-store",
     });
