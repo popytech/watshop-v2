@@ -303,3 +303,91 @@ export async function diagnostiquerPasserelle() {
     };
   }
 }
+
+/**
+ * Éprouve plusieurs constructions d'authentification et rapporte celle qui
+ * passe.
+ *
+ * La documentation dit « signez la clé API à l'aide de la clé secrète », ce qui
+ * laisse plusieurs lectures : sur quoi porte la signature, dans quel encodage,
+ * et le corps de la requête doit-il porter les identifiants. Le serveur répond
+ * « Full authentication is required » — le message de Spring Security quand
+ * aucune donnée d'authentification n'est reconnue, ce qui suggère que l'en-tête
+ * n'est pas lu plutôt qu'une signature fausse.
+ *
+ * Les clés n'étant lisibles que par le serveur, l'essai ne peut se faire que
+ * là. On tente donc les variantes plausibles et on regarde laquelle est
+ * acceptée, plutôt que de déployer six fois pour en éprouver six.
+ */
+export async function essayerAuthentifications() {
+  if (!estConfiguree()) return { ok: false, etape: "configuration" };
+
+  const hex = (message: string) =>
+    createHmac("sha256", CLIENT_SECRET).update(message, "utf8").digest("hex");
+  const b64 = (message: string) =>
+    createHmac("sha256", CLIENT_SECRET).update(message, "utf8").digest("base64");
+
+  const variantes: { nom: string; entetes: Record<string, string>; corps: string }[] = [
+    {
+      nom: "X-API-KEY clientId:hex(clientId), corps vide",
+      entetes: { "X-API-KEY": `${CLIENT_ID}:${hex(CLIENT_ID)}` },
+      corps: "{}",
+    },
+    {
+      nom: "X-API-KEY clientId:hex(clientId), corps avec identifiants",
+      entetes: { "X-API-KEY": `${CLIENT_ID}:${hex(CLIENT_ID)}` },
+      corps: JSON.stringify({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET }),
+    },
+    {
+      nom: "X-API-KEY clientId:base64(clientId)",
+      entetes: { "X-API-KEY": `${CLIENT_ID}:${b64(CLIENT_ID)}` },
+      corps: "{}",
+    },
+    {
+      nom: "X-API-KEY = clientId seul",
+      entetes: { "X-API-KEY": CLIENT_ID },
+      corps: "{}",
+    },
+    {
+      nom: "corps avec identifiants, sans X-API-KEY",
+      entetes: {},
+      corps: JSON.stringify({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET }),
+    },
+    {
+      nom: "Basic clientId:clientSecret",
+      entetes: {
+        Authorization: `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64")}`,
+      },
+      corps: "{}",
+    },
+  ];
+
+  const resultats = [];
+
+  for (const variante of variantes) {
+    try {
+      const reponse = await fetch(`${BASE_URL}/v1/auth`, {
+        method: "POST",
+        headers: { ...ENTETES_COMMUNES, ...variante.entetes },
+        body: variante.corps,
+        cache: "no-store",
+      });
+      const texte = await reponse.text();
+      resultats.push({
+        variante: variante.nom,
+        statut: reponse.status,
+        // Assez pour distinguer un refus d'un jeton, jamais assez pour qu'un
+        // jeton valide se retrouve dans une réponse de diagnostic.
+        extrait: texte.slice(0, 120),
+      });
+    } catch (erreur) {
+      resultats.push({
+        variante: variante.nom,
+        statut: 0,
+        extrait: erreur instanceof Error ? erreur.message : String(erreur),
+      });
+    }
+  }
+
+  return { url: BASE_URL, resultats };
+}
