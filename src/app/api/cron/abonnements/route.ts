@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { envoyerRappels } from "@/lib/payment/reminders";
+import { diagnostiquerPasserelle } from "@/lib/payment/gnakrypay/client";
 
 /*
  * Tâche quotidienne des abonnements.
@@ -47,6 +48,15 @@ async function executer() {
 export async function GET(request: Request) {
   if (!autorise(request)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  // `?diagnostic=passerelle` éprouve l'authentification auprès de la
+  // passerelle et renvoie ce qu'elle a répondu. Derrière le même secret que la
+  // tâche, et sans jamais exposer les clés : seulement le code et le message.
+  // Un échec de paiement ne se diagnostique pas autrement — les clés ne sont
+  // lisibles que par le serveur.
+  if (new URL(request.url).searchParams.get("diagnostic") === "passerelle") {
+    return NextResponse.json(await diagnostiquerPasserelle());
   }
 
   try {

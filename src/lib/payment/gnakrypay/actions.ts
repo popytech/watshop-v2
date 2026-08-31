@@ -129,7 +129,12 @@ export async function lancerPaiement(
         `Demande envoyée. Validez le paiement sur votre téléphone : vos ${duree.libelle} s'activent tout seuls dès la confirmation.`,
       paiementUrl: cree.paymentUrl,
     };
-  } catch {
+  } catch (erreur) {
+    // Le détail part dans les journaux du serveur et jamais à l'écran : il peut
+    // contenir la réponse brute de la passerelle. Sans cette trace, un échec
+    // ne laissait qu'un message poli et rien à diagnostiquer.
+    console.error("[gnakrypay] paiement non lancé :", erreur);
+
     // La ligne créée plus haut resterait en attente pour rien : on la ferme,
     // sinon l'écran afficherait un paiement qui n'a jamais existé.
     await admin.from("payments").update({ status: "rejected" }).eq("id", paiement.id);

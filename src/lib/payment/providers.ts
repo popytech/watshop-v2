@@ -1,4 +1,5 @@
 import type { PaymentProvider } from "@/lib/supabase/types";
+import { estConfiguree } from "@/lib/payment/gnakrypay/client";
 
 // Module paiement.
 //
@@ -167,7 +168,11 @@ export function listProviders(): ProviderInfo[] {
       label: "GNAKRYPAY",
       description:
         "Paiement en ligne immédiat, sans déclaration ni attente de confirmation.",
-      available: Boolean(process.env.GNAKRYPAY_API_KEY?.trim()),
+      // Une seule fonction décide si la passerelle est ouverte, et c'est celle
+      // que le formulaire consulte. Cet encart lisait GNAKRYPAY_API_KEY, un nom
+      // abandonné lors du branchement : il annonçait « bientôt » sous un bouton
+      // de paiement parfaitement fonctionnel.
+      available: estConfiguree(),
       unavailableReason:
         "Intégration en attente des accès API. Le schéma et l'abonnement sont déjà prêts à la recevoir.",
     },

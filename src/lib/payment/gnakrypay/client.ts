@@ -220,3 +220,53 @@ export function estAbouti(statut: StatutPasserelle): boolean {
 export function estPerdu(statut: StatutPasserelle): boolean {
   return statut === "FAILED" || statut === "CANCELLED" || statut === "TIMEOUT";
 }
+
+/**
+ * Éprouve l'authentification auprès de la passerelle et rapporte ce qu'elle
+ * répond.
+ *
+ * Les clés ne sont lisibles que par le serveur : un échec de paiement ne se
+ * diagnostique donc pas depuis un poste de développement, et le message montré
+ * au vendeur est volontairement muet. Cette fonction comble ce trou sans rien
+ * exposer — elle rend le code HTTP et le message de la passerelle, jamais les
+ * clés, et se contente d'indiquer si chacune est renseignée.
+ */
+export async function diagnostiquerPasserelle() {
+  const configuration = {
+    url: BASE_URL,
+    clientId: CLIENT_ID ? `${CLIENT_ID.slice(0, 14)}…` : "(absent)",
+    clientSecret: CLIENT_SECRET ? `renseigné (${CLIENT_SECRET.length} caractères)` : "(absent)",
+    webhookSecret: WEBHOOK_SECRET ? `renseigné (${WEBHOOK_SECRET.length} caractères)` : "(absent)",
+  };
+
+  if (!estConfiguree()) {
+    return { ok: false, etape: "configuration", configuration };
+  }
+
+  try {
+    const reponse = await fetch(`${BASE_URL}/v1/auth`, {
+      method: "POST",
+      headers: { "X-API-KEY": cleApi(), "Content-Type": "application/json" },
+      body: "{}",
+      cache: "no-store",
+    });
+
+    const texte = await reponse.text();
+
+    return {
+      ok: reponse.ok,
+      etape: "authentification",
+      statut: reponse.status,
+      // Tronqué : une réponse d'erreur peut être une page entière.
+      reponse: texte.slice(0, 400),
+      configuration,
+    };
+  } catch (erreur) {
+    return {
+      ok: false,
+      etape: "réseau",
+      message: erreur instanceof Error ? erreur.message : String(erreur),
+      configuration,
+    };
+  }
+}
