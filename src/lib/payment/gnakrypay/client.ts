@@ -19,9 +19,22 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * puis POST /v1/auth pour un jeton Bearer, exigé avec la clé sur chaque appel.
  */
 
-// L'adresse de production, vérifiée : api.djomy.africa renvoie un 403 de
-// Cloudflare sur toutes ses routes, tandis que prod-api répond bien à l'API.
-const BASE_URL = process.env.GNAKRYPAY_API_URL ?? "https://prod-api.djomy.africa";
+/*
+ * L'adresse de production est api.djomy.africa, confirmée par le prestataire.
+ *
+ * Elle est derrière Cloudflare, qui filtre selon l'adresse d'origine : depuis un
+ * poste, on reçoit un 403 « edge » (page HTML, cdn-cgi/content) avant même
+ * d'atteindre l'application — ni le User-Agent ni aucun en-tête n'y changent
+ * rien, c'est un filtrage par IP/ASN. Le verdict dépend donc de QUI appelle :
+ * un échec local ne dit rien du sort d'un appel parti de Vercel. Le seul test
+ * qui tranche est `?diagnostic=passerelle`, lancé depuis l'hébergement.
+ *
+ * À ne pas confondre avec prod-api.djomy.africa : cet hôte répond (health 200)
+ * mais n'exécute pas le filtre d'authentification par clé — une clé valide et
+ * une clé fausse y reçoivent le même refus générique. Ce n'est pas l'API de
+ * production ; api.djomy.africa l'est.
+ */
+const BASE_URL = process.env.GNAKRYPAY_API_URL ?? "https://api.djomy.africa";
 const CLIENT_ID = process.env.GNAKRYPAY_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.GNAKRYPAY_CLIENT_SECRET ?? "";
 /*
