@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { envoyerRappels } from "@/lib/payment/reminders";
-import {
-  diagnostiquerPasserelle,
-  essayerAuthentifications,
-} from "@/lib/payment/gnakrypay/client";
+import { diagnostiquerPasserelle } from "@/lib/payment/gnakrypay/client";
 
 /*
  * Tâche quotidienne des abonnements.
@@ -64,12 +61,6 @@ export async function GET(request: Request) {
     return NextResponse.json(await diagnostiquerPasserelle());
   }
 
-  // `?diagnostic=authentification` éprouve plusieurs constructions d'en-tête
-  // et rapporte celle que la passerelle accepte. À retirer une fois la bonne
-  // connue : c'est un outil de mise en service, pas une route de production.
-  if (diagnostic === "authentification") {
-    return NextResponse.json(await essayerAuthentifications());
-  }
 
   try {
     return NextResponse.json({ ok: true, ...(await executer()) });
