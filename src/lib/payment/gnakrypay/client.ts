@@ -1,5 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { ProxyAgent } from "undici";
 
 /*
  * GNAKRYPAY — client de la passerelle.
@@ -124,6 +125,51 @@ function cleApi(): string {
 }
 
 /*
+ * Sortie par une IP fixe, quand la passerelle filtre sur l'adresse d'origine.
+ *
+ * Le pare-feu du prestataire bloque les IP d'hébergement, et celle de Vercel
+ * change d'un appel à l'autre : impossible de la faire autoriser. La parade est
+ * de faire transiter *uniquement* les appels de la passerelle par un proxy à IP
+ * fixe (un petit serveur à nous, ou un proxy managé), et de donner cette IP —
+ * seule et stable — au prestataire pour sa liste blanche.
+ *
+ * GNAKRYPAY_PROXY_URL porte l'adresse du proxy (http://[user:pass@]hote:port).
+ * Absente, tout part en direct comme avant — la variable est le seul
+ * interrupteur, et rien d'autre dans le code ne bouge.
+ */
+const PROXY_URL = process.env.GNAKRYPAY_PROXY_URL?.trim();
+
+const dispatcher = PROXY_URL ? construireProxy(PROXY_URL) : undefined;
+
+function construireProxy(url: string): ProxyAgent | undefined {
+  try {
+    const u = new URL(url);
+    // Proxy managé (QuotaGuard, Fixie…) : les identifiants voyagent dans l'URL.
+    // undici ne les transforme pas seul en en-tête d'authentification — on le
+    // fait ici, et on retire le userinfo de l'URI passée à l'agent.
+    if (u.username || u.password) {
+      const identifiants = `${decodeURIComponent(u.username)}:${decodeURIComponent(u.password)}`;
+      const token = `Basic ${Buffer.from(identifiants).toString("base64")}`;
+      return new ProxyAgent({ uri: `${u.protocol}//${u.host}`, token });
+    }
+    return new ProxyAgent(url);
+  } catch {
+    // Une URL de proxy illisible ne doit pas faire tomber tout le module au
+    // chargement : on repart en direct, et le diagnostic signalera l'absence.
+    return undefined;
+  }
+}
+
+/*
+ * `dispatcher` n'est pas dans le type standard de `fetch`, mais le fetch de Node
+ * (undici) le lit : c'est ainsi qu'on choisit par où sort la requête. Ce petit
+ * enrobage l'ajoute quand un proxy est configuré, et ne touche à rien sinon.
+ */
+function options(init: RequestInit): RequestInit {
+  return dispatcher ? ({ ...init, dispatcher } as RequestInit) : init;
+}
+
+/*
  * Le jeton est mémorisé le temps de sa validité.
  *
  * Redemander un jeton à chaque appel doublerait les allers-retours et se
@@ -136,12 +182,15 @@ const MARGE_MS = 30_000;
 async function obtenirJeton(): Promise<string> {
   if (jeton && jeton.expireA > Date.now()) return jeton.valeur;
 
-  const reponse = await fetch(`${BASE_URL}/v1/auth`, {
-    method: "POST",
-    headers: { ...ENTETES_COMMUNES, "X-API-KEY": cleApi() },
-    body: "{}",
-    cache: "no-store",
-  });
+  const reponse = await fetch(
+    `${BASE_URL}/v1/auth`,
+    options({
+      method: "POST",
+      headers: { ...ENTETES_COMMUNES, "X-API-KEY": cleApi() },
+      body: "{}",
+      cache: "no-store",
+    }),
+  );
 
   if (!reponse.ok) {
     throw new Error(`GNAKRYPAY : authentification refusée (${reponse.status})`);
@@ -163,16 +212,19 @@ async function obtenirJeton(): Promise<string> {
 async function appeler<T>(chemin: string, init: RequestInit = {}): Promise<T> {
   const acces = await obtenirJeton();
 
-  const reponse = await fetch(`${BASE_URL}${chemin}`, {
-    ...init,
-    headers: {
-      ...ENTETES_COMMUNES,
-      "X-API-KEY": cleApi(),
-      Authorization: `Bearer ${acces}`,
-      ...(init.headers ?? {}),
-    },
-    cache: "no-store",
-  });
+  const reponse = await fetch(
+    `${BASE_URL}${chemin}`,
+    options({
+      ...init,
+      headers: {
+        ...ENTETES_COMMUNES,
+        "X-API-KEY": cleApi(),
+        Authorization: `Bearer ${acces}`,
+        ...(init.headers ?? {}),
+      },
+      cache: "no-store",
+    }),
+  );
 
   const corps = (await reponse.json().catch(() => ({}))) as {
     success?: boolean;
@@ -295,6 +347,9 @@ export async function diagnostiquerPasserelle() {
     clientId: CLIENT_ID ? `${CLIENT_ID.slice(0, 14)}…` : "(absent)",
     clientSecret: CLIENT_SECRET ? `renseigné (${CLIENT_SECRET.length} caractères)` : "(absent)",
     webhookSecret: WEBHOOK_SECRET ? `renseigné (${WEBHOOK_SECRET.length} caractères)` : "(absent)",
+    // Le proxy est-il actif ? Sans exposer son adresse : un simple oui/non, pour
+    // savoir par où sort réellement l'appel qu'on est en train de tester.
+    proxy: PROXY_URL ? (dispatcher ? "actif (IP fixe)" : "configuré mais illisible") : "aucun (direct)",
   };
 
   if (!estConfiguree()) {
@@ -302,12 +357,15 @@ export async function diagnostiquerPasserelle() {
   }
 
   try {
-    const reponse = await fetch(`${BASE_URL}/v1/auth`, {
-      method: "POST",
-      headers: { ...ENTETES_COMMUNES, "X-API-KEY": cleApi() },
-      body: "{}",
-      cache: "no-store",
-    });
+    const reponse = await fetch(
+      `${BASE_URL}/v1/auth`,
+      options({
+        method: "POST",
+        headers: { ...ENTETES_COMMUNES, "X-API-KEY": cleApi() },
+        body: "{}",
+        cache: "no-store",
+      }),
+    );
 
     const texte = await reponse.text();
 

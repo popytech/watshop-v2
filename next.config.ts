@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
       ? [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]
       : [],
   },
+  // undici n'est utilisé que par le client de la passerelle (sortie par IP fixe
+  // via ProxyAgent). On le garde externe au bundle serveur : résolu depuis
+  // node_modules à l'exécution, sans être empaqueté ni recompilé.
+  serverExternalPackages: ["undici"],
 };
 
 export default nextConfig;
