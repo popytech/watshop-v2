@@ -23,10 +23,10 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata = { title: "Administration — Watshop" };
 
 const TUILES = [
-  { table: "profiles" as const, label: "Comptes", icon: Users },
-  { table: "shops" as const, label: "Boutiques", icon: Store },
-  { table: "products" as const, label: "Produits", icon: Package },
-  { table: "orders" as const, label: "Commandes", icon: ShoppingCart },
+  { table: "profiles" as const, label: "Comptes", icon: Users, href: "/admin/comptes" },
+  { table: "shops" as const, label: "Boutiques", icon: Store, href: "/admin/comptes" },
+  { table: "products" as const, label: "Produits", icon: Package, href: null },
+  { table: "orders" as const, label: "Commandes", icon: ShoppingCart, href: null },
 ];
 
 export default async function AdminPage() {
@@ -80,19 +80,36 @@ export default async function AdminPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {TUILES.map((tuile, index) => (
-          <Card key={tuile.table} size="sm">
-            <CardHeader>
-              <CardDescription className="flex items-center gap-2">
-                <tuile.icon className="size-4" />
-                {tuile.label}
-              </CardDescription>
-              <CardTitle className="text-2xl tabular-nums">
-                {formatNumber(comptes[index])}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        ))}
+        {TUILES.map((tuile, index) => {
+          const carte = (
+            <Card
+              size="sm"
+              className={
+                tuile.href ? "h-full transition-colors hover:border-primary/40 hover:bg-accent/40" : undefined
+              }
+            >
+              <CardHeader>
+                <CardDescription className="flex items-center gap-2">
+                  <tuile.icon className="size-4" />
+                  {tuile.label}
+                </CardDescription>
+                <CardTitle className="text-2xl tabular-nums">
+                  {formatNumber(comptes[index])}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          );
+
+          // Comptes et Boutiques mènent à l'écran de gestion ; les deux autres
+          // ne sont pour l'instant que des compteurs.
+          return tuile.href ? (
+            <Link key={tuile.table} href={tuile.href}>
+              {carte}
+            </Link>
+          ) : (
+            <div key={tuile.table}>{carte}</div>
+          );
+        })}
       </div>
 
       {/* Les raccourcis de navigation qui étaient ici ont disparu : la barre de

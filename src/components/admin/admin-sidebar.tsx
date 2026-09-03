@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BadgeCheck, LayoutDashboard, LogOut, Megaphone, Store, Wallet } from "lucide-react";
+import { BadgeCheck, LayoutDashboard, LogOut, Megaphone, Store, Users, Wallet } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ export type AdminBadges = {
 
 const LIENS = [
   { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard, badge: null },
+  { href: "/admin/comptes", label: "Comptes", icon: Users, badge: null },
   { href: "/admin/paiements", label: "Paiements", icon: Wallet, badge: "paiements" },
   { href: "/admin/agents", label: "Agents", icon: BadgeCheck, badge: "agents" },
   { href: "/admin/diffusion", label: "Diffusion", icon: Megaphone, badge: null },
