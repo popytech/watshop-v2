@@ -14,7 +14,10 @@ import { parseVideoSource } from "@/lib/landing/video";
  * pour qu'on vérifie son emplacement avant d'avoir la vidéo.
  */
 
-const VIDEO_URL = process.env.NEXT_PUBLIC_GUIDE_VIDEO_URL?.trim() ?? "";
+// Par défaut, la vidéo-guide fournie ; NEXT_PUBLIC_GUIDE_VIDEO_URL la remplace
+// sans redéploiement si un jour elle change.
+const VIDEO_URL =
+  process.env.NEXT_PUBLIC_GUIDE_VIDEO_URL?.trim() || "https://youtu.be/UKzQyKISEx4";
 
 export function VideoGuide() {
   const source = VIDEO_URL ? parseVideoSource(VIDEO_URL) : null;

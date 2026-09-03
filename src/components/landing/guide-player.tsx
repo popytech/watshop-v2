@@ -42,21 +42,22 @@ export function GuidePlayer({ source }: { source: VideoSource }) {
             aria-label="Lire la vidéo-guide"
             className="group relative size-full cursor-pointer"
           >
-            {/* Affiche : miniature de la vidéo si on en a une, sinon un dégradé
-                de marque. Chargée en fond CSS — aucun <img>, aucun hôte à
-                déclarer. */}
+            {/* Base dégradée toujours peinte : si la miniature n'existe pas
+                (vidéo récente ou non répertoriée, YouTube ne sert pas toujours
+                son image statique), l'affiche reste soignée au lieu de virer au
+                noir. La miniature, chargée en fond CSS — aucun <img>, aucun hôte
+                à déclarer — se pose par-dessus quand elle se charge. */}
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-gradient-to-br from-brand/30 to-brand-foreground/25"
+            />
             {source.poster ? (
               <span
                 aria-hidden
                 className="absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: `url("${source.poster}")` }}
               />
-            ) : (
-              <span
-                aria-hidden
-                className="absolute inset-0 bg-gradient-to-br from-brand/30 to-brand-foreground/25"
-              />
-            )}
+            ) : null}
 
             <span
               aria-hidden
