@@ -87,23 +87,35 @@ function signer(message: string, secret: string): string {
 }
 
 /*
+ * Notre domaine public, tel qu'il apparaît dans Origin/Referer.
+ *
+ * Le prestataire a autorisé « le nom de domaine » de Watshop sur sa passerelle.
+ * Une règle de pare-feu qui filtre sur un domaine ne peut regarder que ces deux
+ * en-têtes — une requête serveur ne transporte rien d'autre qui dise d'où elle
+ * vient. On les joint donc à chaque appel : si l'autorisation porte bien là,
+ * c'est ce qui la déclenche.
+ */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") || "https://watshop.africa";
+
+/*
  * En-têtes joints à chaque appel.
  *
- * L'API de la passerelle est derrière Cloudflare, qui refusait nos requêtes par
- * un 403 accompagné d'une page HTML — pas une réponse de l'API, mais un blocage
- * en amont. La cause tenait à l'allure de la requête : `fetch` côté Node ne
- * présente ni User-Agent ni Accept, ce qu'un pare-feu applicatif lit comme un
- * robot.
+ * L'API de la passerelle est derrière Cloudflare, qui refuse nos requêtes par un
+ * 403 accompagné d'une page HTML — un blocage en amont, avant l'application. Le
+ * User-Agent et Accept décrivent honnêtement un client HTTP ; Origin et Referer
+ * portent notre domaine, celui que le prestataire dit avoir autorisé.
  *
- * Ces trois lignes ne contournent aucune protection : elles décrivent
- * honnêtement un client HTTP. Si le blocage persiste, c'est que Cloudflare filtre
- * sur l'adresse IP, et il faudra alors demander au prestataire d'autoriser
- * celles de notre hébergeur — aucun en-tête n'y changera rien.
+ * Si le 403 persiste malgré ça, c'est que le filtre porte sur l'adresse IP et
+ * non sur le domaine, et il faudra alors faire sortir nos appels par une IP fixe
+ * que le prestataire autorisera (GNAKRYPAY_PROXY_URL) — aucun en-tête n'y pourra
+ * rien.
  */
 const ENTETES_COMMUNES = {
   "User-Agent": "Watshop/1.0 (+https://watshop.africa)",
   Accept: "application/json",
   "Content-Type": "application/json",
+  Origin: SITE_URL,
+  Referer: `${SITE_URL}/`,
 };
 
 /** `X-API-KEY`, à joindre à toutes les requêtes, jeton compris. */
