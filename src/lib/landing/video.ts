@@ -17,10 +17,12 @@ export type VideoSource =
 function youtube(id: string): VideoSource {
   return {
     kind: "embed",
-    // -nocookie : pas de traceur posé tant que le visiteur n'a pas lancé la
-    // lecture. autoplay=1 vaut parce que le clic sur l'affiche fait figure de
-    // geste utilisateur ; rel=0 garde les suggestions dans la même chaîne.
-    embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`,
+    // -nocookie : aucun traceur posé tant que le lecteur n'est pas chargé, et il
+    // ne l'est qu'à l'entrée de la section dans la vue. mute=1 est la condition
+    // que posent les navigateurs pour autoriser une lecture automatique ;
+    // playsinline=1 évite le plein écran forcé sur iPhone ; rel=0 garde les
+    // suggestions dans la même chaîne.
+    embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1`,
     // maxresdefault : la miniature en 1280×720, plein 16:9 — donc la miniature
     // personnalisée s'affiche entière, sans le recadrage qu'imposerait le 4:3 de
     // hqdefault (qui rognerait les bords, et le texte avec). Chargée en fond CSS,
@@ -56,7 +58,8 @@ export function parseVideoSource(url: string): VideoSource | null {
     if (/^\d+$/.test(id)) {
       return {
         kind: "embed",
-        embedUrl: `https://player.vimeo.com/video/${id}?autoplay=1`,
+        // muted=1 : même condition que YouTube pour la lecture automatique.
+        embedUrl: `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&playsinline=1`,
         poster: null,
       };
     }

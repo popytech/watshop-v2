@@ -44,7 +44,7 @@ export function VideoGuide() {
       <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-10 sm:gap-12">
         <SectionHeader
           eyebrow="En vidéo"
-          title="Regardez une boutique se créer, de A à Z"
+          title="Regardez comment créer votre boutique"
           description="De l'inscription à votre premier produit en ligne. Suivez la vidéo, faites pareil de votre côté."
         />
 
