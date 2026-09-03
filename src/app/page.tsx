@@ -5,6 +5,7 @@ import { LandingNav } from "@/components/landing/landing-nav";
 import { LayoutLines } from "@/components/landing/layout-lines";
 import { Hero } from "@/components/landing/hero";
 import { Steps } from "@/components/landing/steps";
+import { VideoGuide } from "@/components/landing/video-guide";
 import { Products } from "@/components/landing/products";
 import { Shops } from "@/components/landing/shops";
 import { Pricing } from "@/components/landing/pricing";
@@ -50,6 +51,12 @@ export default async function Home() {
 
         <div id="fonctionnement">
           <Steps />
+        </div>
+
+        {/* La démonstration en vidéo, juste après les étapes qu'elle illustre.
+            Ne s'affiche que si NEXT_PUBLIC_GUIDE_VIDEO_URL est renseignée. */}
+        <div id="video">
+          <VideoGuide />
         </div>
 
         <div id="boutiques">
