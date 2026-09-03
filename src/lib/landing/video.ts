@@ -21,9 +21,12 @@ function youtube(id: string): VideoSource {
     // lecture. autoplay=1 vaut parce que le clic sur l'affiche fait figure de
     // geste utilisateur ; rel=0 garde les suggestions dans la même chaîne.
     embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`,
-    // Miniature toujours présente (contrairement à maxres), chargée en fond CSS
-    // — donc sans next/image ni configuration d'hôte distant.
-    poster: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+    // maxresdefault : la miniature en 1280×720, plein 16:9 — donc la miniature
+    // personnalisée s'affiche entière, sans le recadrage qu'imposerait le 4:3 de
+    // hqdefault (qui rognerait les bords, et le texte avec). Chargée en fond CSS,
+    // sans next/image ni hôte distant à déclarer ; et si elle venait à manquer,
+    // le dégradé de marque dessous prend le relais.
+    poster: `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
   };
 }
 
